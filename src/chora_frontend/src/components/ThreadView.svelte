@@ -13,6 +13,7 @@
 		onlogin,
 		monadAuthor = '',
 		awaitingMonad = false,
+		onopeninputs,
 	}: {
 		thread: ThreadSummary | null;
 		messages?: ThreadMessage[];
@@ -22,6 +23,7 @@
 		onlogin?: () => void | Promise<void>;
 		monadAuthor?: string;
 		awaitingMonad?: boolean;
+		onopeninputs?: (messageId: string) => void;
 	} = $props();
 
 	let replyPrompt = $state(false);
@@ -53,7 +55,11 @@
 
 		<div class="messages chora-prose">
 			{#each messages as message (message.id)}
-				<ThreadMessageView message={message} monadAuthor={monadAuthor} />
+				<ThreadMessageView
+					message={message}
+					monadAuthor={monadAuthor}
+					onopeninputs={onopeninputs}
+				/>
 			{/each}
 		</div>
 		{#if awaitingMonad}

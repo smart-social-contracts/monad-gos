@@ -67,26 +67,16 @@ The UI is the conversational model from 06: Monad broadcast on top, threads
 branching off, a separate minimal voting area, the single alignment-coefficient
 number, a thin epoch status line.
 
-## The citizen edge: reuse the Geister MCP server (no local LLM)
+## The citizen edge: Chora MCP server (no local LLM)
 
-Chora does **not** ship a local LLM, and does **not** build its own MCP server.
-gos-as-a-service already runs the **Geister MCP server** — a production
-Streamable-HTTP MCP endpoint with OAuth 2.1 + Internet Identity auth, scoped
-tokens (`read` / `full`), consent, and revocation — that lets any MCP-compatible
-assistant (Claude, ChatGPT, …) drive a realm on the citizen's behalf.
+Chora does **not** ship a local LLM. Citizens plug their own assistant (Claude,
+ChatGPT, …) into **`chora-mcp`** — Chora's Streamable-HTTP MCP server (default
+local `:5002`; public URL planned `https://chora-mcp.realmsgos.dev/mcp`). Auth
+uses Chora pairing tokens (`chmcp_…`) with scopes `read` / `full`.
 
-Chora **reuses Geister** and adds a **Chora tool pack** to its existing surface:
-`submit_wish`, `read_broadcast`, the alignment-coefficient read, and the thread
-interface — alongside Geister's generic realm tools (`cast_vote`,
-`submit_proposal`, …).
-
-This removes the pinned-model / on-device-inference burden entirely, and Chora
-inherits Geister's auth and capability scoping rather than rebuilding them. The
-**main piece of work** is closing Geister's **delegated-signing gap**: on-chain
-writes that must be signed as the user (submitting a wish, casting a vote) are
-currently constrained by Geister's calling identity — full delegated signing
-from an MCP client needs an II session delegation, not just an OAuth identity
-binding. For Chora this is the core citizen act, so it is the priority.
+The **open work** on Chora MCP is **delegated signing**: on-chain writes
+(submit wish, cast vote) need an II session delegation, not just a pairing
+token.
 
 ## The Monad: off-chain service
 
@@ -124,14 +114,16 @@ chora/
 │   │   ├── ggg/                  # Motoko impl of the GGG spec
 │   │   ├── agora/                # Wish entity, epoch seal, write path
 │   │   ├── grammar/              # proposal validation (the novel piece)
-│   │   └── alignment/            # membership-due / coefficient accounting
+│   │   ├── alignment/            # membership-due / coefficient accounting
+│   │   └── codex/codex.mo        # Monad-authored public law (treasury, budgets)
 │   └── chora_frontend/           # Svelte 5 lib-mode bundle
 │       └── src/                  # broadcast, threads, voting, coefficient
 ├── monad/                        # off-chain service
 │   ├── engine/                   # swappable LLM interface (proposer/critic/judge)
 │   ├── keys/                     # vetKey + signing (HSM/KMS)
 │   └── pipeline/                 # read sealed epoch → deliberate → emit
-├── mcp_tools/                    # Chora tool pack for the existing Geister MCP server
+├── mcp_server/                   # Chora MCP server (chora-mcp, Streamable HTTP)
+├── mcp_tools/                    # tool pack for chora-mcp
 │   ├── submit_wish.*             # citizen wish submission (needs delegated signing)
 │   ├── read_broadcast.*          # Monad broadcast + threads
 │   └── alignment.*               # alignment-coefficient read

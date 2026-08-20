@@ -1,12 +1,14 @@
 /**
  * Internet Identity for Chora — minimal AuthClient wrapper.
- * Mock mode (VITE_CHORA_MOCK=true) skips II entirely.
+ * Portal embed uses scoped II delegations from the host; mock mode skips II entirely.
  */
 import { AuthClient } from '@dfinity/auth-client';
-
-const MOCK_MODE =
-	import.meta.env.VITE_CHORA_MOCK === 'true' ||
-	!import.meta.env.VITE_CHORA_CANISTER_ID;
+import {
+	getPortalDelegationIdentity,
+	isEmbeddedInPortal,
+	requestAuthRefresh,
+	waitForPortalDelegation,
+} from './portal-bridge.ts';
 
 const IDENTITY_PROVIDER = 'https://identity.ic0.app';
 
@@ -14,7 +16,9 @@ const IDENTITY_PROVIDER = 'https://identity.ic0.app';
 let authClient = null;
 
 export function isAuthMockMode() {
-	return MOCK_MODE;
+	if (import.meta.env.VITE_CHORA_MOCK === 'true') return true;
+	if (isEmbeddedInPortal()) return false;
+	return !import.meta.env.VITE_CHORA_CANISTER_ID;
 }
 
 async function getAuthClient() {
@@ -26,13 +30,21 @@ async function getAuthClient() {
 
 /** @returns {Promise<boolean>} whether a session already exists */
 export async function initAuth() {
-	if (MOCK_MODE) return true;
+	if (isAuthMockMode()) return true;
+	if (isEmbeddedInPortal()) {
+		return !!getPortalDelegationIdentity();
+	}
 	const client = await getAuthClient();
 	return client.isAuthenticated();
 }
 
 export async function login() {
-	if (MOCK_MODE) return;
+	if (isAuthMockMode()) return;
+	if (isEmbeddedInPortal()) {
+		requestAuthRefresh();
+		await waitForPortalDelegation();
+		return;
+	}
 	const client = await getAuthClient();
 	await new Promise((resolve, reject) => {
 		client.login({
@@ -44,19 +56,30 @@ export async function login() {
 }
 
 export async function logout() {
-	if (MOCK_MODE) return;
+	if (isAuthMockMode()) return;
+	if (isEmbeddedInPortal()) {
+		// Host owns the portal session; clear local view only.
+		return;
+	}
 	const client = await getAuthClient();
 	await client.logout();
 }
 
 export function isAnonymous() {
-	if (MOCK_MODE) return false;
+	if (isAuthMockMode()) return false;
+	if (isEmbeddedInPortal()) {
+		const identity = getPortalDelegationIdentity();
+		return !identity || identity.getPrincipal().isAnonymous();
+	}
 	const identity = authClient?.getIdentity();
 	return !identity || identity.getPrincipal().isAnonymous();
 }
 
 export function getPrincipalText() {
-	if (MOCK_MODE) return 'citizen-mock';
+	if (isAuthMockMode()) return 'citizen-mock';
+	if (isEmbeddedInPortal()) {
+		return getPortalDelegationIdentity()?.getPrincipal().toText() ?? '';
+	}
 	const identity = authClient?.getIdentity();
 	return identity?.getPrincipal().toText() ?? '';
 }
@@ -69,6 +92,9 @@ export function formatPrincipalShort(principal = getPrincipalText()) {
 }
 
 export function getIdentity() {
-	if (MOCK_MODE) return authClient?.getIdentity();
+	if (isAuthMockMode()) return authClient?.getIdentity();
+	if (isEmbeddedInPortal()) {
+		return getPortalDelegationIdentity() ?? undefined;
+	}
 	return authClient?.getIdentity();
 }

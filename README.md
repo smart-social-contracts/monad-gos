@@ -28,8 +28,8 @@ instead of law-as-code.
 
 ## One-paragraph summary
 
-Citizens plug their **own AI assistant** (ChatGPT, Claude, …) into Chora via a
-**Chora MCP server**, which exposes tools like `submit_wish`. The assistant
+Citizens plug their **own AI assistant** (ChatGPT, Claude, …) into **Chora
+MCP** (`chora-mcp`), which exposes tools like `submit_wish`. The assistant
 helps the citizen articulate a `Wish`; the wish is encrypted to the Monad's
 vetKey and posted to a canister (the **Agora**). Wishes stream in continuously
 and citizens deliberate publicly while the epoch is open; at the deadline the

@@ -9,7 +9,7 @@ from typing import Any
 
 from backend.client import ChoraBackendClient
 from engine.base import LLMEngine
-from pipeline.converse import generate_reply
+from pipeline.converse import generate_reply_bundle
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +39,16 @@ def reply_if_needed(
 
     in_flight.add(thread_id)
     try:
-        body = generate_reply(engine, thread.get("messages") or [], backend.principal)
-        message_id = backend.reply_to_thread(thread_id, body)
+        bundle = generate_reply_bundle(engine, thread.get("messages") or [], backend.principal)
+        message_id = backend.reply_to_thread(thread_id, bundle["body"])
+        backend.record_reply_inputs(
+            {
+                **bundle,
+                "message_id": message_id,
+                "thread_id": thread_id,
+                "kind": "thread",
+            }
+        )
         logger.info("Replied to %s as %s", thread_id, message_id)
         return message_id
     finally:

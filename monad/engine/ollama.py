@@ -8,10 +8,14 @@ from typing import Any
 
 import requests
 
+from urllib.parse import urlparse
+
 from .base import LLMEngine
 
 DEFAULT_OLLAMA_URL = "https://geister-ollama.realmsgos.dev"
 DEFAULT_MODEL = "llama3.2"
+DEFAULT_TEMPERATURE = "0.8"
+DEFAULT_NUM_PREDICT_TEXT = 512
 
 
 class OllamaEngine(LLMEngine):
@@ -31,17 +35,32 @@ class OllamaEngine(LLMEngine):
         return self._generate(prompt, json_mode=True, num_predict=2048)
 
     def complete_text(self, prompt: str) -> str:
-        return self._generate(prompt, json_mode=False, num_predict=512)
+        return self._generate(prompt, json_mode=False, num_predict=DEFAULT_NUM_PREDICT_TEXT)
+
+    def describe(self) -> dict[str, object]:
+        return {
+            "engine": "ollama",
+            "model": self.model,
+            "engine_host": urlparse(self.base_url).netloc,
+            "temperature": DEFAULT_TEMPERATURE,
+            "num_predict": DEFAULT_NUM_PREDICT_TEXT,
+            "seed": "",
+            "json_mode": False,
+        }
 
     def _generate(self, prompt: str, *, json_mode: bool, num_predict: int) -> str:
         from inactivity import ollama_session
 
         url = f"{self.base_url}/api/generate"
+        options: dict[str, Any] = {
+            "num_predict": num_predict,
+            "temperature": float(DEFAULT_TEMPERATURE),
+        }
         payload: dict[str, Any] = {
             "model": self.model,
             "prompt": prompt,
             "stream": False,
-            "options": {"num_predict": num_predict},
+            "options": options,
         }
         if json_mode:
             payload["format"] = "json"

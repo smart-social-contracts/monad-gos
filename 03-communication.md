@@ -96,3 +96,13 @@ GGG already provides `FederationMessage`. Two sub-cases:
 | Monad → Citizens (account) | hash on-chain, body off-chain | public | n/a (output) |
 | Citizen ↔ Citizen (deliberation) | public discussion layer | public pseudonym | public record |
 | Monad ↔ Monad (federation) | GGG `FederationMessage` | public record | public record |
+
+## Inputs for reproducibility
+
+Every Monad reply links to the **exact inputs** used to produce it: the prompt
+(including thread history), model, engine, host, and sampling settings. The
+page is not a promise of a word-for-word replay — hardware and sampling make
+that unlikely — but a rerun should be **semantically similar**.
+
+Access follows the message: private-thread inputs are visible only to
+participants; broadcast inputs are public.

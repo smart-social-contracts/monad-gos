@@ -3,6 +3,7 @@ import Wishes "./agora/Wishes";
 import Communication "./agora/Communication";
 import Alignment "./alignment/Coefficient";
 import Grammar "./grammar/Validator";
+import Codex "./codex/codex";
 import Map "mo:core/Map";
 import Iter "mo:core/Iter";
 import Array "mo:core/Array";
@@ -10,6 +11,8 @@ import Text "mo:core/Text";
 import Principal "mo:core/Principal";
 import Nat "mo:core/Nat";
 import Nat64 "mo:core/Nat64";
+import Int "mo:core/Int";
+import Time "mo:core/Time";
 
 persistent actor {
   stable var stableAgora : Wishes.Stable = {
@@ -46,6 +49,20 @@ persistent actor {
   stable var grammarForbiddenOps : [Text] = ["mint_unbounded", "seize_all", "revoke_all_mandates"];
   stable var epochPhase : Types.EpochPhase = #converse;
   stable var sealAt : Types.Timestamp = 0;
+  stable var stableReplyInputs : [(Types.ThreadMessageId, Types.ReplyInputs)] = [];
+  stable var stableCodex : Codex.Stable = {
+    treasuryBalance = 0;
+    createdAt = 0;
+    updatedAt = 0;
+    lines = [];
+    commit = "";
+  };
+  stable var nextMcpPairing : Nat = 1;
+  stable var stableMcpPairings : [(Text, { principal : Principal; expires_at : Int })] = [];
+
+  type McpPairing = { principal : Principal; expires_at : Int };
+
+  let mcpPairingTtlNs : Int = 600_000_000_000;
 
   var agora = Wishes.fromStable(stableAgora);
   var alignmentStore = Alignment.fromStable(stableAlignment);
@@ -54,6 +71,12 @@ persistent actor {
   var votes = Map.fromIter<Types.VoteId, Types.Vote>(stableVotes.vals(), Text.compare);
   var voteKeys = Map.fromIter<Text, Types.VoteId>(stableVoteKeys.vals(), Text.compare);
   var proposalOrder : [Types.ProposalId] = stableProposalOrder;
+  var replyInputsStore = Map.fromIter<Types.ThreadMessageId, Types.ReplyInputs>(
+    stableReplyInputs.vals(),
+    Text.compare,
+  );
+  var mcpPairings = Map.fromIter<Text, McpPairing>(stableMcpPairings.vals(), Text.compare);
+  var codexStore = Codex.fromStable(stableCodex);
 
   system func preupgrade() {
     stableAgora := Wishes.toStable(agora);
@@ -63,6 +86,9 @@ persistent actor {
     stableVotes := Iter.toArray(Map.entries(votes));
     stableVoteKeys := Iter.toArray(Map.entries(voteKeys));
     stableProposalOrder := proposalOrder;
+    stableReplyInputs := Iter.toArray(Map.entries(replyInputsStore));
+    stableMcpPairings := Iter.toArray(Map.entries(mcpPairings));
+    stableCodex := Codex.toStable(codexStore);
   };
 
   func grammarConfig() : Grammar.Config {
@@ -119,6 +145,18 @@ persistent actor {
     proposalId # "|" # voter;
   };
 
+  func removePairingsForPrincipal(principal : Principal) {
+    let codesToRemove = Array.filterMap<(Text, McpPairing), Text>(
+      Iter.toArray(Map.entries(mcpPairings)),
+      func ((code, pairing) : (Text, McpPairing)) : ?Text {
+        if (Principal.equal(pairing.principal, principal)) { ?code } else { null };
+      },
+    );
+    for (code in codesToRemove.vals()) {
+      Map.remove(mcpPairings, Text.compare, code);
+    };
+  };
+
   func matchesFilter(proposal : Types.Proposal, filter : Types.ProposalFilter) : Bool {
     let statusOk = switch (filter.status) {
       case (?status) proposal.status == status;
@@ -172,6 +210,43 @@ persistent actor {
 
   public shared ({ caller }) func record_due_payment() : async () {
     Alignment.recordDuePayment(alignmentStore, caller, agora.currentEpoch);
+    Codex.creditDues(codexStore, alignmentStore.membershipDue);
+  };
+
+  public query func get_treasury(name : Types.TreasuryName) : async ?Types.Treasury {
+    if (name != Codex.TREASURY_NAME) {
+      return null;
+    };
+    ?Codex.treasury(codexStore);
+  };
+
+  public query func get_realm_state() : async Codex.RealmState {
+    Codex.snapshot(
+      codexStore,
+      alignmentStore.membershipDue,
+      Alignment.compute(alignmentStore, agora.currentEpoch),
+      Wishes.currentEpochId(agora),
+    );
+  };
+
+  public shared ({ caller }) func set_codex_commit(commit : Text) : async Types.Result {
+    switch (requireMonad(caller)) {
+      case (?err) #err(err);
+      case null {
+        if (Text.size(commit) == 0) {
+          return #err(#invalid_input("commit is required"));
+        };
+        Codex.setCommit(codexStore, commit);
+        #ok;
+      };
+    };
+  };
+
+  public shared ({ caller }) func codex_spend(line : Text, amount : Nat) : async Types.Result {
+    switch (requireMonad(caller)) {
+      case (?err) #err(err);
+      case null Codex.spend(codexStore, line, amount);
+    };
   };
 
   public query func alignment_coefficient() : async Types.AlignmentCoefficient {
@@ -229,6 +304,47 @@ persistent actor {
       return #err(#forbidden("epoch is not open for thread replies"));
     };
     Communication.replyToThread(communication, caller, threadId, body, monadPrincipal);
+  };
+
+  public shared query ({ caller }) func get_reply_inputs(
+    messageId : Types.ThreadMessageId,
+  ) : async ?Types.ReplyInputs {
+    switch (Map.get(replyInputsStore, Text.compare, messageId)) {
+      case null null;
+      case (?inputs) {
+        if (inputs.kind == "broadcast") {
+          ?inputs;
+        } else {
+          switch (
+            Communication.readThread(communication, caller, inputs.thread_id, monadPrincipal)
+          ) {
+            case null null;
+            case (?_) ?inputs;
+          };
+        };
+      };
+    };
+  };
+
+  public shared ({ caller }) func record_reply_inputs(
+    inputs : Types.ReplyInputs,
+  ) : async Types.Result {
+    switch (requireMonad(caller)) {
+      case (?err) #err(err);
+      case null {
+        if (Text.size(inputs.message_id) == 0) {
+          return #err(#invalid_input("message_id is required"));
+        };
+        if (Text.size(inputs.prompt) == 0) {
+          return #err(#invalid_input("prompt is required"));
+        };
+        let stored : Types.ReplyInputs = {
+          inputs with created_at = Types.now();
+        };
+        Map.add(replyInputsStore, Text.compare, inputs.message_id, stored);
+        #ok;
+      };
+    };
   };
 
   public shared ({ caller }) func post_broadcast(body : Text) : async Types.Result_BroadcastId {
@@ -397,5 +513,33 @@ persistent actor {
 
   public query func validate_proposal(input : Types.SubmitProposalInput) : async Types.Result {
     Grammar.validateInput(grammarConfig(), input);
+  };
+
+  public shared ({ caller }) func create_mcp_pairing() : async Types.Result_Text {
+    if (Principal.isAnonymous(caller)) {
+      return #err(#unauthorized);
+    };
+    removePairingsForPrincipal(caller);
+    let code = "mcp_" # Nat.toText(nextMcpPairing) # "_" # Nat.toText(Int.abs(Time.now()));
+    nextMcpPairing += 1;
+    let pairing : McpPairing = {
+      principal = caller;
+      expires_at = Time.now() + mcpPairingTtlNs;
+    };
+    Map.add(mcpPairings, Text.compare, code, pairing);
+    #ok(code);
+  };
+
+  public query func verify_mcp_pairing(code : Text) : async ?Text {
+    switch (Map.get(mcpPairings, Text.compare, code)) {
+      case null null;
+      case (?pairing) {
+        if (Time.now() >= pairing.expires_at) {
+          null;
+        } else {
+          ?Principal.toText(pairing.principal);
+        };
+      };
+    };
   };
 };

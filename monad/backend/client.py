@@ -121,6 +121,24 @@ RESULT_BROADCAST_ID = Types.Variant({"ok": Types.Text, "err": GGG_ERROR})
 RESULT_PROPOSAL_ID = Types.Variant({"ok": Types.Text, "err": GGG_ERROR})
 RESULT_THREAD_MESSAGE_ID = Types.Variant({"ok": Types.Text, "err": GGG_ERROR})
 
+REPLY_INPUTS = Types.Record(
+    {
+        "message_id": Types.Text,
+        "thread_id": Types.Text,
+        "broadcast_id": Types.Text,
+        "kind": Types.Text,
+        "model": Types.Text,
+        "engine": Types.Text,
+        "engine_host": Types.Text,
+        "prompt": Types.Text,
+        "temperature": Types.Text,
+        "num_predict": Types.Nat,
+        "seed": Types.Text,
+        "json_mode": Types.Bool,
+        "created_at": Types.Nat64,
+    }
+)
+
 THREAD_MESSAGE = Types.Record(
     {
         "id": Types.Text,
@@ -360,6 +378,25 @@ class ChoraBackendClient:
                 operation="reply_to_thread",
             )
         )
+
+    def record_reply_inputs(self, inputs: dict[str, Any]) -> None:
+        payload = {
+            "message_id": inputs["message_id"],
+            "thread_id": inputs.get("thread_id", ""),
+            "broadcast_id": inputs.get("broadcast_id", ""),
+            "kind": inputs.get("kind", "thread"),
+            "model": str(inputs.get("model", "")),
+            "engine": str(inputs.get("engine", "")),
+            "engine_host": str(inputs.get("engine_host", "")),
+            "prompt": inputs["prompt"],
+            "temperature": str(inputs.get("temperature", "")),
+            "num_predict": int(inputs.get("num_predict") or 0),
+            "seed": str(inputs.get("seed", "")),
+            "json_mode": bool(inputs.get("json_mode", False)),
+            "created_at": 0,
+        }
+        args = [{"type": REPLY_INPUTS, "value": payload}]
+        _unwrap_ok(self._update("record_reply_inputs", args, [RESULT]), operation="record_reply_inputs")
 
     def post_broadcast(self, text: str) -> str:
         args = [{"type": Types.Text, "value": text}]

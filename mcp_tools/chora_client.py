@@ -2,15 +2,13 @@
 """
 Thin client for the Chora backend canister.
 
-Uses ``icp canister call`` (same approach as geister/realm_tools.py) against the
-live Candid interface in chora/chora_backend.did.
+Uses ``icp canister call`` against the live Candid interface in chora_backend.did.
 """
 from __future__ import annotations
 
 import json
 import os
 import subprocess
-import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Literal, Optional, TypedDict
@@ -37,19 +35,7 @@ _CHORA_DID = os.path.abspath(
 )
 
 
-def _ensure_icp_candid():
-    try:
-        import icp_candid  # noqa: F401
-        return
-    except ImportError:
-        pass
-    geister_dir = os.environ.get("GEISTER_DIR", "/srv/dev/geister")
-    if geister_dir not in sys.path:
-        sys.path.insert(0, geister_dir)
-
-
-_ensure_icp_candid()
-import icp_candid as _ct  # noqa: E402
+import icp_candid as _ct
 
 
 class SubmitWishRequest(TypedDict):
@@ -309,7 +295,7 @@ class ChoraClient:
             f"domain = {_candid_text(request['domain'])}; "
             f"ciphertext = {_candid_text(cipher)}; "
             f"epoch = {_candid_text(wish_epoch)}; "
-            f"assistant_id = {_candid_text(request.get('assistant_id') or 'geister-mcp')}; "
+            f"assistant_id = {_candid_text(request.get('assistant_id') or 'chora-mcp')}; "
             "})"
         )
         raw = self._call("submit_wish", args, identity=identity, query=False)
@@ -471,6 +457,15 @@ class ChoraClient:
         raw = self._call("reply_to_thread", args, identity=identity, query=False)
         message_id = str(_unwrap_result(raw))
         return {"message_id": message_id}
+
+    def verify_mcp_pairing(self, code: str) -> str | None:
+        args = f"({_candid_text(code)})"
+        raw = self._call("verify_mcp_pairing", args, query=True)
+        if raw is None:
+            return None
+        if isinstance(raw, str):
+            return raw
+        return None
 
     def cast_vote(
         self,

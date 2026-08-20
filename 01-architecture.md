@@ -8,8 +8,8 @@ off-chain.
 
 | Component | Where it runs | Role |
 |---|---|---|
-| **Personal assistant** | Citizen's choice (ChatGPT, Claude, …) | The citizen's own AI assistant, plugged into the realm via the existing **Geister MCP server**. Helps the citizen articulate a wish and submits it. Chosen and trusted by the citizen, not shipped by Chora. |
-| **Geister MCP server** | gos-as-a-service (existing) | The production MCP server the platform already runs. Chora reuses it and adds Chora-specific tools (`submit_wish`, `read_broadcast`, …). The controlled entry point between a citizen's assistant and the realm. |
+| **Personal assistant** | Citizen's choice (ChatGPT, Claude, …) | The citizen's own AI assistant, plugged into the realm via the **Chora MCP server**. Helps the citizen articulate a wish and submits it. Chosen and trusted by the citizen, not shipped by Chora. |
+| **Chora MCP server** | Runs with Chora (Streamable HTTP) | Chora's own MCP server (`chora-mcp`). Exposes Chora tools (`submit_wish`, `read_broadcast`, …). The controlled entry point between a citizen's assistant and the realm. |
 | **Agora** | Module in the Chora canister | The message repository. The *only* citizen write path. Stores encrypted wishes and the public discussion record. |
 | **Monad** | Off-chain (single operator) | The AI executive. Reads the sealed epoch, deliberates adversarially, emits signed GGG `Proposal`s. Holds a realm `Position` under a revocable `Mandate`. |
 | **GGG core** | Module in the Chora canister | Chora's **Motoko implementation of the `ggg` spec** (see 08). Defines the entities the Monad reasons over and the grammar its output must satisfy. |
@@ -64,9 +64,9 @@ the grammar cannot reach:
   it (ChatGPT, Claude, …), the shaping is done by a tool they trust — not one
   Chora imposes. There is no pinned model hash and no constitutional amendment
   to change assistants; the choice is the citizen's, and may differ per citizen.
-- **The Geister MCP server** is the controlled entry point: it authenticates the
-  citizen (OAuth 2.1 + Internet Identity) and holds their authority to submit
-  wishes and vote. See 04 §5.
+- **The Chora MCP server** is the controlled entry point: it authenticates the
+  citizen (Chora pairing tokens) and holds their authority to submit wishes and
+  vote. See 04 §5.
 - **The Monad's signing key** is held off-chain. See 04 for the central-operator
   posture and its required mitigations (HSM/KMS attestation + codex kill
   switch).

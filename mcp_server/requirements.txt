@@ -1,0 +1,7 @@
+mcp>=1.26.0,<2
+uvicorn
+starlette
+anyio
+httpx
+pytest
+pytest-asyncio

@@ -60,11 +60,11 @@ Unresolved.
   point: the assistant mediating a citizen's intent still influences what the
   realm hears. Now it is distributed across many assistants rather than one
   pinned model.
-- **Assistant credential security.** Reusing the Geister MCP server lets
-  third-party assistants act with a citizen's authority. A compromised assistant
-  could submit wishes or votes as the citizen. Geister already provides scoped
-  tokens, consent, and revocation; the open work is **delegated signing** for
-  on-chain writes (see below).
+- **Assistant credential security.** Chora MCP lets third-party assistants act
+  with a citizen's authority. A compromised assistant could submit wishes or
+  votes as the citizen. Pairing tokens (`chmcp_…`) provide scoped access,
+  consent, and revocation; the open work is **delegated signing** for on-chain
+  writes (see below).
 - **Monad lobbying.** Mid-epoch clarification is useful *and* is the Monad
   shaping input. Contained by the public-record rule and the no-private-channel
   rule; both must hold for the safeguard to be real.
@@ -75,8 +75,6 @@ Unresolved.
 - The codex grammar's formal definition (valid entity set, spend caps, forbidden
   ops).
 - The kill-switch mechanism in detail.
-- The Chora tool pack on the Geister MCP server, and especially **delegated
-  signing** — letting an MCP client sign on-chain writes (submit wish, cast
-  vote) as the citizen via an II session delegation, which Geister flags as
-  future work and Chora needs as a core act.
+- **Chora MCP delegated signing** — letting an MCP client sign on-chain writes
+  (submit wish, cast vote) as the citizen via an II session delegation.
 - Threshold-aggregate decryption for wishes.

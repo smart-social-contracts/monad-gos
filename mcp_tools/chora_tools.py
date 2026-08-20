@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 """
-Chora MCP tool definitions for the Geister MCP server.
-
-Follows the same REALM_TOOLS pattern as geister/realm_tools.py so this pack can
-be merged into Geister's tool surface without changing its execution model.
+Chora MCP tool definitions for the Chora MCP server.
 """
 from __future__ import annotations
 
@@ -28,12 +25,12 @@ _CHORA_DOMAIN_ENUM: list[str] = [
 _DELEGATION_ERROR = {
     "error": (
         "On-chain writes must be signed as your Internet Identity principal. "
-        "Geister MCP binds your principal via OAuth or a pairing token but does "
-        "not hold an II session delegation key yet, so mutating Chora canister "
-        "calls cannot be signed on your behalf."
+        "Chora MCP binds your principal via a pairing token but does not hold "
+        "an II session delegation key yet, so mutating Chora canister calls "
+        "cannot be signed on your behalf."
     ),
     "error_code": "delegation_unavailable",
-    "required": "II session delegation (not just OAuth identity binding)",
+    "required": "II session delegation (not just pairing-token identity binding)",
 }
 
 
@@ -51,7 +48,7 @@ def submit_wish(
     text: str,
     domain: str,
     author_principal: str = "",
-    assistant_id: str = "geister-mcp",
+    assistant_id: str = "chora-mcp",
     network: str = "staging",
     chora_canister_id: str = "",
     identity: str = "",
@@ -75,7 +72,7 @@ def submit_wish(
                 "text": text,
                 "domain": domain,  # type: ignore[typeddict-item]
                 "author_principal": author_principal,
-                "assistant_id": assistant_id or "geister-mcp",
+                "assistant_id": assistant_id or "chora-mcp",
             },
             identity=identity,
         )
@@ -274,7 +271,7 @@ def reply_to_thread(
         return json.dumps({"error": str(e)})
 
 
-def chora_cast_vote(
+def cast_vote(
     proposal_id: str,
     choice: str,
     metadata: str = "",
@@ -282,10 +279,7 @@ def chora_cast_vote(
     chora_canister_id: str = "",
     identity: str = "",
 ) -> str:
-    """Cast a vote on a Chora governance proposal (yes/no/abstain).
-
-    Named ``chora_cast_vote`` to avoid colliding with Geister's realm ``cast_vote``.
-    """
+    """Cast a vote on a Chora governance proposal (yes/no/abstain)."""
     blocked = _delegation_blocked(identity)
     if blocked:
         return blocked
@@ -296,7 +290,7 @@ def chora_cast_vote(
         )
         return json.dumps(result)
     except Exception as e:
-        log.exception("chora_cast_vote failed")
+        log.exception("cast_vote failed")
         return json.dumps({"error": str(e)})
 
 
@@ -483,10 +477,9 @@ CHORA_TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "chora_cast_vote",
+            "name": "cast_vote",
             "description": (
-                "Cast a vote on a Chora governance proposal (yes, no, or abstain). "
-                "Distinct from Geister's realm cast_vote tool."
+                "Cast a vote on a Chora governance proposal (yes, no, or abstain)."
             ),
             "parameters": {
                 "type": "object",
@@ -508,7 +501,7 @@ CHORA_WRITE_TOOLS = frozenset({
     "submit_wish",
     "reply_to_broadcast",
     "reply_to_thread",
-    "chora_cast_vote",
+    "cast_vote",
 })
 
 CHORA_TOOL_NAMES = frozenset(t["function"]["name"] for t in CHORA_TOOLS)
@@ -516,8 +509,8 @@ CHORA_TOOL_NAMES = frozenset(t["function"]["name"] for t in CHORA_TOOLS)
 _CHORA_CANISTER_PARAM = {
     "type": "string",
     "description": (
-        "Canister ID of the Chora backend to interact with (from list_realms "
-        "when the realm runs chora-gos). Falls back to CHORA_CANISTER_ID env."
+        "Canister ID of the Chora backend to interact with. "
+        "Falls back to CHORA_CANISTER_ID env."
     ),
 }
 for _tool in CHORA_TOOLS:
@@ -538,7 +531,7 @@ TOOL_FUNCTIONS = {
     "read_thread": read_thread,
     "reply_to_broadcast": reply_to_broadcast,
     "reply_to_thread": reply_to_thread,
-    "chora_cast_vote": chora_cast_vote,
+    "cast_vote": cast_vote,
 }
 
 
@@ -551,7 +544,7 @@ def execute_chora_tool(
     user_principal: str = "",
     user_identity: str = "",
 ) -> str:
-    """Execute a Chora tool by name (same contract as realm_tools.execute_tool)."""
+    """Execute a Chora tool by name."""
     if tool_name not in TOOL_FUNCTIONS:
         return json.dumps({"error": f"Unknown Chora tool '{tool_name}'"})
 

@@ -190,6 +190,56 @@ type Result_VoteId = variant { ok : VoteId; err : GggError };
 type Result_ThreadId = variant { ok : ThreadId; err : GggError };
 type Result_ThreadMessageId = variant { ok : ThreadMessageId; err : GggError };
 type Result_BroadcastId = variant { ok : BroadcastId; err : GggError };
+type Result_Text = variant { ok : text; err : GggError };
+
+type TreasuryName = text;
+
+type Treasury = record {
+  name : TreasuryName;
+  balance : nat;
+  created_at : Timestamp;
+  updated_at : Timestamp;
+};
+
+type BudgetLine = record {
+  name : text;
+  share_bps : nat;
+  allocated : nat;
+  spent : nat;
+  available : nat;
+};
+
+type CodexMeta = record {
+  version : text;
+  source_url : text;
+  commit : text;
+  preamble : text;
+};
+
+type RealmState = record {
+  treasury : Treasury;
+  lines : vec BudgetLine;
+  membership_due : nat;
+  alignment : AlignmentCoefficient;
+  epoch_id : EpochId;
+  codex : CodexMeta;
+};
+
+type ReplyInputs = record {
+  message_id : ThreadMessageId;
+  thread_id : ThreadId;
+  broadcast_id : BroadcastId;
+  kind : text;
+  model : text;
+  engine : text;
+  engine_host : text;
+  prompt : text;
+  temperature : text;
+  num_predict : nat;
+  seed : text;
+  json_mode : bool;
+  created_at : Timestamp;
+};
 
 service : {
   // GGG v0.2.0 — slim scope
@@ -220,5 +270,13 @@ service : {
   "freeze_monad" : () -> (Result);
   "monad_frozen" : () -> (bool) query;
   "post_broadcast" : (text) -> (Result_BroadcastId);
+  "record_reply_inputs" : (ReplyInputs) -> (Result);
+  "get_reply_inputs" : (ThreadMessageId) -> (opt ReplyInputs) query;
   "validate_proposal" : (SubmitProposalInput) -> (Result) query;
+  "create_mcp_pairing" : () -> (Result_Text);
+  "verify_mcp_pairing" : (text) -> (opt text) query;
+  "get_treasury" : (TreasuryName) -> (opt Treasury) query;
+  "get_realm_state" : () -> (RealmState) query;
+  "set_codex_commit" : (text) -> (Result);
+  "codex_spend" : (text, nat) -> (Result);
 };

@@ -1,12 +1,13 @@
 /**
  * Chora backend client — GGG canister (ggg.did v0.2.0) plus Chora admin extensions.
  *
- * Mock mode: set VITE_CHORA_MOCK=true, or leave VITE_CHORA_CANISTER_ID unset.
+ * Mock mode: VITE_CHORA_MOCK=true, or no canister ID when not portal-embedded.
  * Query calls use an anonymous agent; updates use the Internet Identity session.
  */
 import { HttpAgent, Actor } from '@dfinity/agent';
 import { IDL } from '@dfinity/candid';
-import { getIdentity, isAuthMockMode } from './lib/auth.js';
+import { getIdentity } from './lib/auth.js';
+import { isEmbeddedInPortal } from './lib/portal-bridge.ts';
 import {
 	mockAlignment,
 	mockBroadcast,
@@ -15,12 +16,40 @@ import {
 	mockThreads,
 } from './lib/mock_data.js';
 
-const MOCK_MODE =
-	import.meta.env.VITE_CHORA_MOCK === 'true' ||
-	!import.meta.env.VITE_CHORA_CANISTER_ID;
+/** @type {string | null} */
+let runtimeCanisterId = null;
+/** @type {string | null} */
+let runtimeHost = null;
 
-const CANISTER_ID = import.meta.env.VITE_CHORA_CANISTER_ID || '';
-const HOST = import.meta.env.VITE_IC_HOST || 'http://127.0.0.1:4943';
+export function configureChoraRuntime({ canisterId, host } = {}) {
+	runtimeCanisterId = canisterId || null;
+	runtimeHost = host || null;
+	resetActors();
+}
+
+export function getCanisterId() {
+	return runtimeCanisterId || import.meta.env.VITE_CHORA_CANISTER_ID || '';
+}
+
+function getHost() {
+	if (runtimeHost) return runtimeHost;
+	if (typeof window !== 'undefined') {
+		const { hostname } = window.location;
+		if (
+			isEmbeddedInPortal() &&
+			(hostname.endsWith('.icp0.io') || hostname.endsWith('gos.earth'))
+		) {
+			return 'https://icp0.io';
+		}
+	}
+	return import.meta.env.VITE_IC_HOST || 'http://127.0.0.1:4943';
+}
+
+export function isMockMode() {
+	if (import.meta.env.VITE_CHORA_MOCK === 'true') return true;
+	if (isEmbeddedInPortal()) return false;
+	return !getCanisterId();
+}
 
 const gggError = IDL.Variant({
 	not_found: IDL.Null,
@@ -148,6 +177,49 @@ const gggIdlFactory = ({ IDL }) => {
 	const Result_WishId = IDL.Variant({ ok: IDL.Text, err: gggError });
 	const Result_ThreadId = IDL.Variant({ ok: IDL.Text, err: gggError });
 	const Result_ThreadMessageId = IDL.Variant({ ok: IDL.Text, err: gggError });
+	const Result_Text = IDL.Variant({ ok: IDL.Text, err: gggError });
+	const Treasury = IDL.Record({
+		name: IDL.Text,
+		balance: IDL.Nat,
+		created_at: IDL.Nat64,
+		updated_at: IDL.Nat64,
+	});
+	const BudgetLine = IDL.Record({
+		name: IDL.Text,
+		share_bps: IDL.Nat,
+		allocated: IDL.Nat,
+		spent: IDL.Nat,
+		available: IDL.Nat,
+	});
+	const CodexMeta = IDL.Record({
+		version: IDL.Text,
+		source_url: IDL.Text,
+		commit: IDL.Text,
+		preamble: IDL.Text,
+	});
+	const RealmState = IDL.Record({
+		treasury: Treasury,
+		lines: IDL.Vec(BudgetLine),
+		membership_due: IDL.Nat,
+		alignment: AlignmentCoefficient,
+		epoch_id: IDL.Text,
+		codex: CodexMeta,
+	});
+	const ReplyInputs = IDL.Record({
+		message_id: IDL.Text,
+		thread_id: IDL.Text,
+		broadcast_id: IDL.Text,
+		kind: IDL.Text,
+		model: IDL.Text,
+		engine: IDL.Text,
+		engine_host: IDL.Text,
+		prompt: IDL.Text,
+		temperature: IDL.Text,
+		num_predict: IDL.Nat,
+		seed: IDL.Text,
+		json_mode: IDL.Bool,
+		created_at: IDL.Nat64,
+	});
 
 	return IDL.Service({
 		ggg_version: IDL.Func([], [IDL.Text], ['query']),
@@ -162,6 +234,11 @@ const gggIdlFactory = ({ IDL }) => {
 		reply_to_thread: IDL.Func([IDL.Text, IDL.Text], [Result_ThreadMessageId], []),
 		list_proposals: IDL.Func([ProposalFilter], [IDL.Vec(Proposal)], ['query']),
 		cast_vote: IDL.Func([CastVoteInput], [Result_VoteId], []),
+		get_reply_inputs: IDL.Func([IDL.Text], [IDL.Opt(ReplyInputs)], ['query']),
+		create_mcp_pairing: IDL.Func([], [Result_Text], []),
+		verify_mcp_pairing: IDL.Func([IDL.Text], [IDL.Opt(IDL.Text)], ['query']),
+		get_treasury: IDL.Func([IDL.Text], [IDL.Opt(Treasury)], ['query']),
+		get_realm_state: IDL.Func([], [RealmState], ['query']),
 	});
 };
 
@@ -182,13 +259,14 @@ export function resetActors() {
 }
 
 async function createAgent(identity) {
+	const host = getHost();
 	const agent = new HttpAgent({
-		host: HOST,
+		host,
 		identity,
 		verifyQuerySignatures: false,
 	});
 	// fetchRootKey is only for local replica — never on mainnet
-	if (HOST.includes('127.0.0.1') || HOST.includes('localhost')) {
+	if (host.includes('127.0.0.1') || host.includes('localhost')) {
 		await agent.fetchRootKey();
 	}
 	return agent;
@@ -200,7 +278,7 @@ function identityKey() {
 }
 
 async function getQueryActor() {
-	if (MOCK_MODE) return null;
+	if (isMockMode()) return null;
 	const identity = getIdentity();
 	const principalKey = identityKey();
 	if (!queryActorPromise || queryIdentityKey !== principalKey) {
@@ -209,7 +287,7 @@ async function getQueryActor() {
 			const agent = await createAgent(identity);
 			return Actor.createActor(gggIdlFactory, {
 				agent,
-				canisterId: CANISTER_ID,
+				canisterId: getCanisterId(),
 			});
 		})();
 	}
@@ -217,7 +295,7 @@ async function getQueryActor() {
 }
 
 async function getUpdateActor() {
-	if (MOCK_MODE) return null;
+	if (isMockMode()) return null;
 	const identity = getIdentity();
 	const principalKey = identity?.getPrincipal().toText() ?? 'anonymous';
 	if (!updateActorPromise || updateIdentityKey !== principalKey) {
@@ -226,7 +304,7 @@ async function getUpdateActor() {
 			const agent = await createAgent(identity);
 			return Actor.createActor(gggIdlFactory, {
 				agent,
-				canisterId: CANISTER_ID,
+				canisterId: getCanisterId(),
 			});
 		})();
 	}
@@ -235,7 +313,7 @@ async function getUpdateActor() {
 
 /** Lightweight health check — anonymous ggg_version query. */
 export async function checkConnection() {
-	if (MOCK_MODE) return { ok: true, version: 'mock' };
+	if (isMockMode()) return { ok: true, version: 'mock' };
 	try {
 		const actor = await getQueryActor();
 		const version = await actor.ggg_version();
@@ -337,7 +415,7 @@ function delay(ms = 80) {
 
 /** @returns {Promise<import('./lib/mock_data.js').EpochStatus>} */
 export async function getEpochStatus() {
-	if (MOCK_MODE) {
+	if (isMockMode()) {
 		await delay();
 		const now = Math.floor(Date.now() / 1000);
 		return {
@@ -355,9 +433,67 @@ export async function getEpochStatus() {
 	};
 }
 
+function mapRealmState(raw) {
+	return {
+		treasury: {
+			name: raw.treasury.name,
+			balance: Number(raw.treasury.balance),
+			created_at: Number(raw.treasury.created_at),
+			updated_at: Number(raw.treasury.updated_at),
+		},
+		lines: raw.lines.map((line) => ({
+			name: line.name,
+			share_bps: Number(line.share_bps),
+			allocated: Number(line.allocated),
+			spent: Number(line.spent),
+			available: Number(line.available),
+		})),
+		membership_due: Number(raw.membership_due),
+		alignment: {
+			coefficient: raw.alignment.coefficient,
+			citizens_current: Number(raw.alignment.citizens_current),
+			citizens_total: Number(raw.alignment.citizens_total),
+			membership_due: Number(raw.alignment.membership_due),
+			as_of: Number(raw.alignment.as_of),
+		},
+		epoch_id: raw.epoch_id,
+		codex: {
+			version: raw.codex.version,
+			source_url: raw.codex.source_url,
+			commit: raw.codex.commit,
+			preamble: raw.codex.preamble,
+		},
+	};
+}
+
+export async function getRealmState() {
+	if (isMockMode()) {
+		await delay();
+		return {
+			treasury: { name: 'chora', balance: 0, created_at: 0, updated_at: 0 },
+			lines: [
+				{ name: 'reserve', share_bps: 5000, allocated: 0, spent: 0, available: 0 },
+				{ name: 'commons', share_bps: 3000, allocated: 0, spent: 0, available: 0 },
+				{ name: 'operations', share_bps: 2000, allocated: 0, spent: 0, available: 0 },
+			],
+			membership_due: 12,
+			alignment: structuredClone(mockAlignment),
+			epoch_id: '0',
+			codex: {
+				version: '0.1.0',
+				source_url: 'https://github.com/smart-social-contracts/chora-gos/blob/main/src/chora_backend/codex/codex.mo',
+				commit: '',
+				preamble: 'The Monad holds no purse of its own.',
+			},
+		};
+	}
+	const actor = await getQueryActor();
+	return mapRealmState(await actor.get_realm_state());
+}
+
 /** @returns {Promise<import('./lib/mock_data.js').BroadcastFeed>} */
 export async function readBroadcast() {
-	if (MOCK_MODE) {
+	if (isMockMode()) {
 		await delay();
 		return structuredClone(mockBroadcast);
 	}
@@ -371,7 +507,7 @@ export async function readBroadcast() {
 
 /** @returns {Promise<{ threads: import('./lib/mock_data.js').ThreadSummary[] }>} */
 export async function listThreads() {
-	if (MOCK_MODE) {
+	if (isMockMode()) {
 		await delay();
 		return { threads: Object.values(mockThreads).map((t) => mapThreadSummary(t)) };
 	}
@@ -396,8 +532,48 @@ export async function waitForNewMessage(threadId, previousCount, timeoutMs = 450
 	return null;
 }
 
-export async function readThread(threadId) {
+export async function getReplyInputs(messageId) {
 	if (MOCK_MODE) {
+		await delay();
+		return {
+			message_id: messageId,
+			thread_id: 'thread-mock',
+			broadcast_id: '',
+			kind: 'thread',
+			model: 'mock',
+			engine: 'mock',
+			engine_host: 'local',
+			prompt: 'Mock prompt for reproducibility.',
+			temperature: '0',
+			num_predict: 0,
+			seed: '0',
+			json_mode: false,
+			created_at: Math.floor(Date.now() / 1000),
+		};
+	}
+	const actor = await getQueryActor();
+	const raw = await actor.get_reply_inputs(messageId);
+	const inputs = raw[0];
+	if (!inputs) return null;
+	return {
+		message_id: inputs.message_id,
+		thread_id: inputs.thread_id,
+		broadcast_id: inputs.broadcast_id,
+		kind: inputs.kind,
+		model: inputs.model,
+		engine: inputs.engine,
+		engine_host: inputs.engine_host,
+		prompt: inputs.prompt,
+		temperature: inputs.temperature,
+		num_predict: Number(inputs.num_predict),
+		seed: inputs.seed,
+		json_mode: Boolean(inputs.json_mode),
+		created_at: Number(inputs.created_at),
+	};
+}
+
+export async function readThread(threadId) {
+	if (isMockMode()) {
 		await delay();
 		const entry = mockThreads[threadId];
 		if (!entry) throw new Error(`Thread not found: ${threadId}`);
@@ -417,7 +593,7 @@ export async function readThread(threadId) {
 
 /** @returns {Promise<import('./lib/mock_data.js').AlignmentData>} */
 export async function alignmentCoefficient() {
-	if (MOCK_MODE) {
+	if (isMockMode()) {
 		await delay();
 		return structuredClone(mockAlignment);
 	}
@@ -442,7 +618,7 @@ export async function alignmentCoefficient() {
 
 /** @returns {Promise<import('./lib/mock_data.js').ProposalView[]>} */
 export async function listProposals() {
-	if (MOCK_MODE) {
+	if (isMockMode()) {
 		await delay();
 		return structuredClone(mockProposals);
 	}
@@ -462,7 +638,7 @@ export async function listProposals() {
  * @param {string} epoch
  */
 export async function submitWish(domain, body, epoch) {
-	if (MOCK_MODE) {
+	if (isMockMode()) {
 		await delay();
 		return { wish_id: `wish-mock-${Date.now()}` };
 	}
@@ -484,7 +660,7 @@ export async function submitWish(domain, body, epoch) {
  * @param {'yes' | 'no' | 'abstain'} choice
  */
 export async function castVote(proposalId, choice) {
-	if (MOCK_MODE) {
+	if (isMockMode()) {
 		await delay();
 		const proposal = mockProposals.find((p) => p.id === proposalId);
 		if (!proposal) throw new Error('Proposal not found');
@@ -510,7 +686,7 @@ export async function castVote(proposalId, choice) {
  * @param {string} body
  */
 export async function replyToBroadcast(broadcastId, body) {
-	if (MOCK_MODE) {
+	if (isMockMode()) {
 		await delay();
 		const threadId = `thread-private-${Date.now()}`;
 		const now = Math.floor(Date.now() / 1000);
@@ -549,7 +725,7 @@ export async function replyToBroadcast(broadcastId, body) {
  * @param {string} body
  */
 export async function replyToThread(threadId, body) {
-	if (MOCK_MODE) {
+	if (isMockMode()) {
 		await delay();
 		const entry = mockThreads[threadId];
 		if (!entry) throw new Error('Thread not found');
@@ -574,14 +750,23 @@ export async function replyToThread(threadId, body) {
 	return { message_id: result.ok };
 }
 
-export function isMockMode() {
-	return MOCK_MODE;
+export async function createMcpPairing() {
+	if (isMockMode()) {
+		await delay();
+		return 'mcp_mock_pairing';
+	}
+	const actor = await getUpdateActor();
+	const result = await actor.create_mcp_pairing();
+	if ('err' in result) {
+		throw new Error(`create_mcp_pairing failed: ${JSON.stringify(result.err)}`);
+	}
+	return result.ok;
 }
 
 export function getConfig() {
 	return {
-		mock: MOCK_MODE,
-		canisterId: CANISTER_ID,
-		host: HOST,
+		mock: isMockMode(),
+		canisterId: getCanisterId(),
+		host: getHost(),
 	};
 }

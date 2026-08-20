@@ -7,12 +7,14 @@
 		principalShort = '',
 		onlogin,
 		onlogout,
+		onsettings,
 	}: {
 		connectionStatus?: ConnectionStatus;
 		isLoggedIn?: boolean;
 		principalShort?: string;
 		onlogin?: () => void | Promise<void>;
 		onlogout?: () => void | Promise<void>;
+		onsettings?: () => void;
 	} = $props();
 
 	const statusLabel = $derived(
@@ -40,6 +42,9 @@
 	<div class="auth">
 		{#if isLoggedIn}
 			<span class="principal chora-muted">{principalShort}</span>
+			<button type="button" class="chora-btn chora-btn-ghost" onclick={() => onsettings?.()}>
+				Settings
+			</button>
 			<button type="button" class="chora-btn chora-btn-ghost" onclick={() => onlogout?.()}>
 				Sign out
 			</button>

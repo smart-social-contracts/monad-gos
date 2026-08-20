@@ -5,6 +5,8 @@
 		ConnectionStatus,
 		EpochStatus,
 		ProposalView,
+		RealmState,
+		ReplyInputs,
 		ThreadMessage,
 		ThreadSummary,
 		View,
@@ -13,6 +15,7 @@
 		alignmentCoefficient,
 		castVote,
 		checkConnection,
+		configureChoraRuntime,
 		getEpochStatus,
 		isMockMode,
 		listProposals,
@@ -25,6 +28,8 @@
 		submitWish,
 		monadPrincipal,
 		waitForNewMessage,
+		getReplyInputs,
+		getRealmState,
 	} from './chora_api.js';
 	import {
 		formatPrincipalShort,
@@ -34,6 +39,12 @@
 		login,
 		logout,
 	} from './lib/auth.js';
+	import {
+		initPortalBridge,
+		isEmbeddedInPortal,
+		portalUiReady,
+		waitForPortalConfig,
+	} from './lib/portal-bridge.ts';
 	import AppHeader from './components/AppHeader.svelte';
 	import EpochStatusLine from './components/EpochStatusLine.svelte';
 	import AlignmentCoefficient from './components/AlignmentCoefficient.svelte';
@@ -43,6 +54,9 @@
 	import ThreadsList from './components/ThreadsList.svelte';
 	import MessageComposer from './components/MessageComposer.svelte';
 	import LoginPrompt from './components/LoginPrompt.svelte';
+	import ReplyInputsPage from './components/ReplyInputsPage.svelte';
+	import RealmDashboard from './components/RealmDashboard.svelte';
+	import Settings from './components/Settings.svelte';
 
 	const MONAD_ERROR =
 		'The Monad could not be reached. Check your connection, or try again later.';
@@ -59,6 +73,7 @@
 	let publicThreads = $state<ThreadSummary[]>([]);
 	let allThreads = $state<ThreadSummary[]>([]);
 	let proposals = $state<ProposalView[]>([]);
+	let realmState = $state<RealmState | null>(null);
 
 	let activeThreadId = $state<string | null>(null);
 	let activeThread = $state<ThreadSummary | null>(null);
@@ -67,6 +82,9 @@
 	let replyBroadcastId = $state<string | null>(null);
 	let replyPrompt = $state(false);
 	let awaitingMonad = $state(false);
+	let activeInputsId = $state<string | null>(null);
+	let activeInputs = $state<ReplyInputs | null>(null);
+	let inputsMissing = $state(false);
 	const monadAuthor = monadPrincipal();
 
 	let isLoggedIn = $state(isMockMode());
@@ -95,6 +113,9 @@
 		await logout();
 		resetActors();
 		refreshAuthState();
+		if (view === 'settings') {
+			view = 'broadcast';
+		}
 	}
 
 	async function loadCore() {
@@ -102,12 +123,13 @@
 		error = null;
 		monadError = null;
 		try {
-			const [epoch, align, broadcast, proposalList, threadList] = await Promise.all([
+			const [epoch, align, broadcast, proposalList, threadList, realm] = await Promise.all([
 				getEpochStatus(),
 				alignmentCoefficient(),
 				readBroadcast(),
 				listProposals(),
 				listThreads(),
+				getRealmState(),
 			]);
 			epochStatus = epoch;
 			alignment = align;
@@ -115,6 +137,7 @@
 			publicThreads = broadcast.public_threads;
 			proposals = proposalList;
 			allThreads = threadList.threads;
+			realmState = realm;
 			connectionStatus = 'connected';
 		} catch (e) {
 			const message = e instanceof Error ? e.message : 'Failed to load Chora';
@@ -128,6 +151,19 @@
 
 	async function bootstrap() {
 		connectionStatus = 'connecting';
+
+		if (isEmbeddedInPortal()) {
+			const config = await waitForPortalConfig({ timeoutMs: 30_000 });
+			if (!config?.backendCanisterId) {
+				connectionStatus = 'error';
+				monadError = MONAD_ERROR;
+				error = 'Portal configuration not received';
+				loading = false;
+				return;
+			}
+			configureChoraRuntime({ canisterId: config.backendCanisterId });
+		}
+
 		if (!isMockMode()) {
 			await initAuth();
 			refreshAuthState();
@@ -144,6 +180,10 @@
 
 		connectionStatus = 'connected';
 		await loadCore();
+		if (isEmbeddedInPortal()) {
+			portalUiReady();
+		}
+		await applyInputsHash();
 	}
 
 	async function openThread(threadId: string) {
@@ -279,8 +319,67 @@
 		activeThreadId = null;
 	}
 
+	function goRealm() {
+		view = 'realm';
+		replyBroadcastId = null;
+	}
+
+	function goSettings() {
+		view = 'settings';
+		replyBroadcastId = null;
+		activeThreadId = null;
+	}
+
+	async function openInputs(messageId: string) {
+		activeInputsId = messageId;
+		view = 'inputs';
+		const target = `#inputs/${messageId}`;
+		if (location.hash !== target) {
+			location.hash = `inputs/${messageId}`;
+		}
+		try {
+			activeInputs = await getReplyInputs(messageId);
+			inputsMissing = !activeInputs;
+		} catch {
+			activeInputs = null;
+			inputsMissing = true;
+		}
+	}
+
+	async function applyInputsHash() {
+		const match = location.hash.match(/^#inputs\/(.+)$/);
+		if (match?.[1]) {
+			await openInputs(match[1]);
+		}
+	}
+
+	function closeInputs() {
+		if (location.hash.startsWith('#inputs/')) {
+			history.replaceState(null, '', `${location.pathname}${location.search}`);
+		}
+		if (activeThreadId) {
+			view = 'thread';
+		} else {
+			view = 'broadcast';
+		}
+	}
+
 	$effect(() => {
+		let disposeBridge = () => {};
+		if (isEmbeddedInPortal()) {
+			disposeBridge = initPortalBridge();
+		}
+
+		const onPortalAuth = async () => {
+			resetActors();
+			refreshAuthState();
+			await loadCore();
+		};
+		window.addEventListener('portal:auth', onPortalAuth);
+		window.addEventListener('hashchange', applyInputsHash);
+
 		bootstrap();
+
 		const interval = setInterval(async () => {
 			try {
 				epochStatus = await getEpochStatus();
@@ -289,7 +388,13 @@
 				/* background refresh — ignore */
 			}
 		}, 60000);
-		return () => clearInterval(interval);
+
+		return () => {
+			disposeBridge();
+			window.removeEventListener('portal:auth', onPortalAuth);
+			window.removeEventListener('hashchange', applyInputsHash);
+			clearInterval(interval);
+		};
 	});
 </script>
 
@@ -300,6 +405,7 @@
 		principalShort={principalShort}
 		onlogin={handleLogin}
 		onlogout={handleLogout}
+		onsettings={goSettings}
 	/>
 
 	{#if epochStatus}
@@ -336,7 +442,15 @@
 			>
 				Threads
 			</button>
-			{#if isMockMode()}
+			<button
+				type="button"
+				class="nav-btn"
+				class:active={view === 'realm'}
+				onclick={goRealm}
+			>
+				Realm
+			</button>
+			{#if isMockMode() && !isEmbeddedInPortal()}
 				<span class="mock-badge chora-muted">Mock data</span>
 			{/if}
 		</nav>
@@ -387,9 +501,20 @@
 						onback={goBroadcast}
 						onreply={submitThreadReply}
 						onlogin={handleLogin}
+						onopeninputs={openInputs}
+					/>
+				{:else if view === 'inputs'}
+					<ReplyInputsPage
+						inputs={activeInputs}
+						missing={inputsMissing}
+						onback={closeInputs}
 					/>
 				{:else if view === 'threads'}
 					<ThreadsList threads={allThreads} onopenthread={openThread} />
+				{:else if view === 'realm'}
+					<RealmDashboard data={realmState} />
+				{:else if view === 'settings'}
+					<Settings needsAuth={needsAuth} onlogin={handleLogin} />
 				{:else}
 					<VotingArea
 						proposals={proposals}

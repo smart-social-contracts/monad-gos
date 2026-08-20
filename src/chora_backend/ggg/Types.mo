@@ -188,6 +188,15 @@ module {
     as_of : Timestamp;
   };
 
+  public type TreasuryName = Text;
+
+  public type Treasury = {
+    name : TreasuryName;
+    balance : Nat;
+    created_at : Timestamp;
+    updated_at : Timestamp;
+  };
+
   public type SubmitWishInput = {
     domain : Domain;
     ciphertext : Text;
@@ -225,6 +234,24 @@ module {
   public type Result_ThreadId = { #ok : ThreadId; #err : GggError };
   public type Result_ThreadMessageId = { #ok : ThreadMessageId; #err : GggError };
   public type Result_BroadcastId = { #ok : BroadcastId; #err : GggError };
+  public type Result_Text = { #ok : Text; #err : GggError };
+
+  /// Inputs used to produce a Monad reply. Same access rule as the thread.
+  public type ReplyInputs = {
+    message_id : ThreadMessageId;
+    thread_id : ThreadId;
+    broadcast_id : BroadcastId;
+    kind : Text;
+    model : Text;
+    engine : Text;
+    engine_host : Text;
+    prompt : Text;
+    temperature : Text;
+    num_predict : Nat;
+    seed : Text;
+    json_mode : Bool;
+    created_at : Timestamp;
+  };
 
   public let GGG_VERSION : Text = "0.2.0";
 

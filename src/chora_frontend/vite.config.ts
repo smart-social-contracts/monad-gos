@@ -3,6 +3,15 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { resolve } from 'node:path';
 import { writeFileSync, mkdirSync } from 'node:fs';
 
+/**
+ * Frontend env (optional unless noted):
+ * - VITE_CHORA_CANISTER_ID — backend canister
+ * - VITE_IC_HOST — replica / IC gateway (default http://127.0.0.1:4943)
+ * - VITE_CHORA_MOCK — mock data when true
+ * - VITE_CHORA_MCP_URL — Chora MCP server base URL (default http://127.0.0.1:5002)
+ * - VITE_MONAD_PRINCIPAL — Monad author principal for thread UI
+ */
+
 const BUILD_ID = Date.now().toString();
 
 const distHtml = `<!DOCTYPE html>

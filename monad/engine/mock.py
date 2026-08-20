@@ -73,6 +73,17 @@ class MockEngine(LLMEngine):
             )
         return json.dumps({"error": "unknown role", "prompt_head": prompt[:80]})
 
+    def describe(self) -> dict[str, object]:
+        return {
+            "engine": "mock",
+            "model": "mock",
+            "engine_host": "local",
+            "temperature": "0",
+            "num_predict": 0,
+            "seed": "0",
+            "json_mode": False,
+        }
+
     def complete_text(self, prompt: str) -> str:
         return (
             "I hear you. I will weigh this with the other wishes of the epoch "

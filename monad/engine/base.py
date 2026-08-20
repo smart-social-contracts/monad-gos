@@ -15,3 +15,15 @@ class LLMEngine(ABC):
     def complete_text(self, prompt: str) -> str:
         """Plain-text completion (no JSON constraint). Defaults to ``complete``."""
         return self.complete(prompt)
+
+    def describe(self) -> dict[str, object]:
+        """Public engine metadata for a reproducibility record."""
+        return {
+            "engine": "unknown",
+            "model": "",
+            "engine_host": "",
+            "temperature": "",
+            "num_predict": 0,
+            "seed": "",
+            "json_mode": False,
+        }

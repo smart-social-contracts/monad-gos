@@ -1,6 +1,68 @@
 export type EpochPhase = 'converse' | 'sealed' | 'deliberate' | 'ratify' | 'execute';
 export type ThreadVisibility = 'private' | 'public';
-export type View = 'broadcast' | 'thread' | 'voting' | 'threads';
+export type View = 'broadcast' | 'thread' | 'voting' | 'threads' | 'inputs' | 'settings' | 'realm';
+
+export interface Treasury {
+	name: string;
+	balance: number;
+	created_at: number;
+	updated_at: number;
+}
+
+export interface BudgetLine {
+	name: string;
+	share_bps: number;
+	allocated: number;
+	spent: number;
+	available: number;
+}
+
+export interface CodexMeta {
+	version: string;
+	source_url: string;
+	commit: string;
+	preamble: string;
+}
+
+export interface RealmState {
+	treasury: Treasury;
+	lines: BudgetLine[];
+	membership_due: number;
+	alignment: AlignmentCoefficient;
+	epoch_id: string;
+	codex: CodexMeta;
+}
+
+export type McpTokenScope = 'read' | 'full';
+
+export interface McpTokenMeta {
+	id: number;
+	label: string;
+	scope: McpTokenScope;
+	created_at: string;
+	expires_at?: string | null;
+	last_used_at?: string | null;
+}
+
+export interface McpTokenCreated extends McpTokenMeta {
+	token: string;
+}
+
+export interface ReplyInputs {
+	message_id: string;
+	thread_id: string;
+	broadcast_id: string;
+	kind: string;
+	model: string;
+	engine: string;
+	engine_host: string;
+	prompt: string;
+	temperature: string;
+	num_predict: number;
+	seed: string;
+	json_mode: boolean;
+	created_at: number;
+}
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'error';
 

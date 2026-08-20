@@ -37,11 +37,24 @@ def generate_reply(
     messages: list[dict[str, Any]],
     monad_principal: str,
 ) -> str:
-    text = engine.complete_text(build_prompt(messages, monad_principal)).strip()
+    return generate_reply_bundle(engine, messages, monad_principal)["body"]
+
+
+def generate_reply_bundle(
+    engine: LLMEngine,
+    messages: list[dict[str, Any]],
+    monad_principal: str,
+) -> dict[str, Any]:
+    prompt = build_prompt(messages, monad_principal)
+    text = engine.complete_text(prompt).strip()
     if text.startswith("Monad:"):
         text = text[len("Monad:") :].strip()
     if len(text) > 800:
         text = text[:797].rstrip() + "…"
     if not text:
         raise ValueError("empty Monad reply")
-    return text
+    return {
+        "body": text,
+        "prompt": prompt,
+        **engine.describe(),
+    }

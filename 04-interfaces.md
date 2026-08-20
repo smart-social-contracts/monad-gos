@@ -90,38 +90,25 @@ is high" but "**source S reported value V at time T**," so a voter — or the
 critic model — can check it. With open oracles, the critic's job expands from
 policy-checking to **fact-checking**.
 
-## 5. The citizen's assistant (reuse the Geister MCP server)
+## 5. The citizen's assistant (Chora MCP server)
 
-Chora does **not** ship a local LLM, and it does **not** operate its own MCP
-server. gos-as-a-service already runs a production MCP server — **Geister**
-(`geister-mcp.realmsgos.dev/mcp`) — that lets any MCP-compatible assistant
-(Claude, ChatGPT, …) drive a realm on the citizen's behalf. Chora **reuses
-Geister** and adds its own domain tools to it.
+Chora does **not** ship a local LLM. It **does** operate its own MCP server —
+**`chora-mcp`** (Streamable HTTP; default local `:5002`; public URL planned
+`https://chora-mcp.realmsgos.dev/mcp`). Any MCP-compatible assistant (Claude,
+ChatGPT, …) plugs into Chora MCP to drive the realm on the citizen's behalf.
+Chora does **not** use `geister-mcp.realmsgos.dev`.
 
-This is a deliberate inversion of the "local LLM" idea:
+- **No pinned model.** The front-door model is the citizen's *choice*, not a
+  component Chora imposes.
+- **Chora pairing tokens** (`chmcp_…`) authenticate MCP clients, with scopes
+  `read` / `full`, consent, and revocation.
 
-- **No pinned model, no constitutional amendment to change assistants.** The
-  front-door model is the citizen's *choice*, not a component Chora imposes —
-  so the "your model shaped my wish" risk becomes the citizen's liability, not
-  Chora's.
-- **Adoption friction collapses.** Citizens use an assistant they already trust;
-  no on-device model to install, pin, or exclude weak hardware over.
-- **The auth/capability problem is already solved.** Geister provides OAuth 2.1
-  + Internet Identity, scoped tokens (`read` / `full`), consent, and revocation.
-  Chora inherits this rather than rebuilding it.
+**Tools exposed:** `submit_wish`, `read_broadcast`, alignment-coefficient read,
+thread interface, `cast_vote`, …
 
-**What Chora adds:** its own tools on the existing Geister surface —
-`submit_wish`, `read_broadcast`, the alignment-coefficient read, and the thread
-interface — alongside the generic realm tools Geister already exposes
-(`cast_vote`, `submit_proposal`, …).
-
-**The one real gap: delegated signing.** Geister's own docs note that on-chain
-*writes* that must be signed as the user (e.g. casting a vote) are constrained
-by Geister's calling identity — full delegated signing from an MCP client is
-"future work" (it needs an II session delegation, not just an OAuth identity
-binding). For Chora this is the **core** citizen act — submitting a wish and
-voting — so closing the delegated-signing gap is Chora's main MCP work, not
-standing up a server.
+**The one real gap: delegated signing.** On-chain *writes* that must be signed
+as the user (submitting a wish, casting a vote) need an **II session
+delegation**, not just a pairing token. Closing that gap is Chora MCP work.
 
 ## Interface trust summary
 
@@ -131,4 +118,4 @@ standing up a server.
 | Monad key | central operator | **no** | HSM/KMS attestation + kill switch |
 | Federation | public record | partial | on-record traffic |
 | Oracles | open | **no** | falsifiable claims + critic fact-check |
-| Citizen assistant (Geister MCP) | citizen-chosen assistant; reuse Geister server | **no** | inherited OAuth+II scopes; delegated-signing gap to close |
+| Citizen assistant (Chora MCP) | citizen-chosen assistant; Chora MCP server | **no** | Chora pairing tokens (`chmcp_…`); delegated-signing gap to close |
