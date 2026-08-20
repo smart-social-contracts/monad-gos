@@ -1,0 +1,13 @@
+# Cloudflare tunnel ingress for Monad Ollama (credentials injected at runtime).
+# Do NOT create DNS or tunnel credentials here — provision separately.
+#
+# Suggested hostname: monad-ollama.realmsgos.dev → localhost:11434
+# Then set MONAD_OLLAMA_URL=https://monad-ollama.realmsgos.dev
+
+tunnel: realms-runpod
+credentials-file: /root/.cloudflared/credentials.json
+
+ingress:
+  - hostname: monad-ollama.realmsgos.dev
+    service: http://localhost:11434
+  - service: http_status:404

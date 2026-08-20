@@ -1,0 +1,224 @@
+// Chora backend v0.2 — slim Motoko GGG + Agora + alignment + grammar + communication.
+// Matches ggg.did v0.2.0 for Chora slim scope, plus Chora setup/admin extensions.
+
+type PrincipalId = text;
+type EntityId = text;
+type Timestamp = nat64;
+type IsoTimestamp = text;
+type Metadata = text;
+
+type GggError = variant {
+  not_found;
+  unauthorized;
+  invalid_input : text;
+  conflict : text;
+  forbidden : text;
+};
+
+type Result = variant { ok; err : GggError };
+
+type Domain = text;
+
+type WishId = EntityId;
+type EpochId = text;
+
+type Wish = record {
+  id : WishId;
+  author : PrincipalId;
+  domain : Domain;
+  ciphertext : text;
+  epoch : EpochId;
+  assistant_id : text;
+  created_at : Timestamp;
+};
+
+type ProposalId = EntityId;
+
+type ProposalStatus = variant {
+  pending_vote;
+  voting;
+  approved;
+  rejected;
+  no_quorum;
+  expired;
+};
+
+type Proposal = record {
+  id : ProposalId;
+  title : text;
+  description : text;
+  code_url : text;
+  code_checksum : text;
+  proposer : PrincipalId;
+  status : ProposalStatus;
+  voting_deadline : opt IsoTimestamp;
+  votes_yes : nat;
+  votes_no : nat;
+  votes_abstain : nat;
+  total_voters : nat;
+  required_threshold : float64;
+  org_scope : text;
+  metadata : Metadata;
+  created_at : Timestamp;
+  updated_at : Timestamp;
+};
+
+type VoteId = EntityId;
+
+type VoteChoice = variant { yes; no; abstain };
+
+type Vote = record {
+  id : VoteId;
+  proposal_id : ProposalId;
+  voter : PrincipalId;
+  choice : VoteChoice;
+  metadata : Metadata;
+  created_at : Timestamp;
+};
+
+type BroadcastId = EntityId;
+type ThreadId = EntityId;
+type ThreadMessageId = EntityId;
+
+type BroadcastMessage = record {
+  id : BroadcastId;
+  author : PrincipalId;
+  body : text;
+  epoch : EpochId;
+  created_at : Timestamp;
+};
+
+type ThreadVisibility = text;
+
+type ThreadSummary = record {
+  id : ThreadId;
+  title : text;
+  participant_count : nat;
+  visibility : ThreadVisibility;
+  last_activity_at : Timestamp;
+  epoch : EpochId;
+};
+
+type BroadcastFeed = record {
+  broadcasts : vec BroadcastMessage;
+  public_threads : vec ThreadSummary;
+};
+
+type ThreadMessage = record {
+  id : ThreadMessageId;
+  thread_id : ThreadId;
+  author : PrincipalId;
+  body : text;
+  created_at : Timestamp;
+};
+
+type Thread = record {
+  id : ThreadId;
+  title : text;
+  visibility : ThreadVisibility;
+  participant_count : nat;
+  epoch : EpochId;
+  broadcast_id : opt BroadcastId;
+  messages : vec ThreadMessage;
+  created_at : Timestamp;
+  updated_at : Timestamp;
+};
+
+type EpochPhase = variant {
+  converse;
+  sealed;
+  deliberate;
+  ratify;
+  execute;
+};
+
+type EpochStatus = record {
+  epoch_id : EpochId;
+  phase : EpochPhase;
+  seal_at : Timestamp;
+  seconds_until_seal : nat;
+};
+
+type AlignmentCoefficient = record {
+  coefficient : float64;
+  citizens_total : nat;
+  citizens_current : nat;
+  membership_due : nat;
+  as_of : Timestamp;
+};
+
+type AlignmentTrendPoint = record {
+  epoch : EpochId;
+  coefficient : float64;
+  as_of : Timestamp;
+};
+
+type SubmitWishInput = record {
+  domain : Domain;
+  ciphertext : text;
+  epoch : EpochId;
+  assistant_id : text;
+};
+
+type SubmitProposalInput = record {
+  title : text;
+  description : text;
+  code_url : text;
+  code_checksum : text;
+  voting_deadline : opt IsoTimestamp;
+  required_threshold : opt float64;
+  org_scope : text;
+  metadata : Metadata;
+};
+
+type CastVoteInput = record {
+  proposal_id : ProposalId;
+  choice : VoteChoice;
+  metadata : Metadata;
+};
+
+type ProposalFilter = record {
+  status : opt ProposalStatus;
+  org_scope : opt text;
+  limit : nat;
+  offset : nat;
+};
+
+type Result_WishId = variant { ok : WishId; err : GggError };
+type Result_ProposalId = variant { ok : ProposalId; err : GggError };
+type Result_VoteId = variant { ok : VoteId; err : GggError };
+type Result_ThreadId = variant { ok : ThreadId; err : GggError };
+type Result_ThreadMessageId = variant { ok : ThreadMessageId; err : GggError };
+type Result_BroadcastId = variant { ok : BroadcastId; err : GggError };
+
+service : {
+  // GGG v0.2.0 — slim scope
+  "ggg_version" : () -> (text) query;
+  "alignment_coefficient" : () -> (AlignmentCoefficient) query;
+  "alignment_trend" : () -> (vec AlignmentTrendPoint) query;
+  "submit_wish" : (SubmitWishInput) -> (Result_WishId);
+  "get_wish" : (WishId) -> (opt Wish) query;
+  "list_wishes_by_epoch" : (EpochId) -> (vec Wish) query;
+  "submit_proposal" : (SubmitProposalInput) -> (Result_ProposalId);
+  "get_proposal" : (ProposalId) -> (opt Proposal) query;
+  "list_proposals" : (ProposalFilter) -> (vec Proposal) query;
+  "cast_vote" : (CastVoteInput) -> (Result_VoteId);
+  "get_vote" : (VoteId) -> (opt Vote) query;
+  "read_broadcast" : () -> (BroadcastFeed) query;
+  "list_threads" : () -> (vec ThreadSummary) query;
+  "read_thread" : (ThreadId) -> (opt Thread) query;
+  "reply_to_broadcast" : (BroadcastId, text) -> (Result_ThreadId);
+  "reply_to_thread" : (ThreadId, text) -> (Result_ThreadMessageId);
+  "get_epoch_status" : () -> (EpochStatus) query;
+
+  // Chora setup / admin extensions (not in ggg.did)
+  "current_epoch" : () -> (text) query;
+  "seal_epoch" : () -> (Result);
+  "record_due_payment" : () -> ();
+  "bootstrap_admin" : () -> (Result);
+  "set_monad_principal" : (principal) -> (Result);
+  "freeze_monad" : () -> (Result);
+  "monad_frozen" : () -> (bool) query;
+  "post_broadcast" : (text) -> (Result_BroadcastId);
+  "validate_proposal" : (SubmitProposalInput) -> (Result) query;
+};

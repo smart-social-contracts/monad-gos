@@ -1,0 +1,30 @@
+# icp-cli / Motoko
+.icp/
+.mops/
+*.wasm
+*.wasm.gz
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# Frontend
+node_modules/
+dist/
+.svelte-kit/
+.vite/
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.secrets.env
+
+# OS / editor
+.DS_Store
+*.swp
+*~

@@ -1,0 +1,134 @@
+:root {
+	--chora-bg: #f7f5f2;
+	--chora-surface: #ffffff;
+	--chora-text: #2c2a26;
+	--chora-text-muted: #6b6560;
+	--chora-border: #e8e4de;
+	--chora-accent: #3d5a6c;
+	--chora-accent-soft: #e8eef2;
+	--chora-monad: #4a5568;
+	--chora-yes: #2d6a4f;
+	--chora-no: #9b4d4d;
+	--chora-font: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+	--chora-font-ui: system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--chora-prose: 42rem;
+	--chora-radius: 6px;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	background: var(--chora-bg);
+	color: var(--chora-text);
+	font-family: var(--chora-font);
+	font-size: 18px;
+	line-height: 1.65;
+	-webkit-font-smoothing: antialiased;
+}
+
+#chora-root {
+	min-height: 100vh;
+}
+
+button,
+input,
+textarea {
+	font-family: var(--chora-font-ui);
+}
+
+button {
+	cursor: pointer;
+}
+
+a {
+	color: var(--chora-accent);
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+.chora-muted {
+	color: var(--chora-text-muted);
+	font-size: 0.875rem;
+}
+
+.chora-prose {
+	max-width: var(--chora-prose);
+}
+
+.chora-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.45rem 0.85rem;
+	border: 1px solid var(--chora-border);
+	border-radius: var(--chora-radius);
+	background: var(--chora-surface);
+	color: var(--chora-text);
+	font-size: 0.875rem;
+	transition: background 0.15s ease;
+}
+
+.chora-btn:hover {
+	background: var(--chora-accent-soft);
+}
+
+.chora-btn-primary {
+	background: var(--chora-accent);
+	border-color: var(--chora-accent);
+	color: #fff;
+}
+
+.chora-btn-primary:hover {
+	background: #2f4858;
+}
+
+.chora-btn-ghost {
+	border-color: transparent;
+	background: transparent;
+}
+
+.chora-btn-ghost:hover {
+	background: var(--chora-accent-soft);
+}
+
+.chora-btn-yes {
+	border-color: var(--chora-yes);
+	color: var(--chora-yes);
+}
+
+.chora-btn-no {
+	border-color: var(--chora-no);
+	color: var(--chora-no);
+}
+
+.chora-input,
+.chora-textarea {
+	width: 100%;
+	padding: 0.65rem 0.75rem;
+	border: 1px solid var(--chora-border);
+	border-radius: var(--chora-radius);
+	background: var(--chora-surface);
+	font-size: 1rem;
+	line-height: 1.5;
+}
+
+.chora-textarea {
+	min-height: 5rem;
+	resize: vertical;
+}
+
+.chora-input:focus,
+.chora-textarea:focus {
+	outline: 2px solid var(--chora-accent-soft);
+	border-color: var(--chora-accent);
+}

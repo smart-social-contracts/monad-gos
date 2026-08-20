@@ -1,0 +1,87 @@
+<script lang="ts">
+	import type { ThreadSummary } from '../lib/types';
+
+	let {
+		threads = [],
+		onopenthread,
+	}: {
+		threads?: ThreadSummary[];
+		onopenthread?: (threadId: string) => void;
+	} = $props();
+</script>
+
+<section class="threads-list" aria-label="Threads">
+	<header class="section-header">
+		<h1>Threads</h1>
+		<p class="chora-muted intro">
+			Public and private conversations with the Monad and fellow citizens.
+		</p>
+	</header>
+
+	{#if threads.length === 0}
+		<p class="chora-muted">No threads yet.</p>
+	{:else}
+		<ul>
+			{#each threads as thread (thread.id)}
+				<li>
+					<button type="button" class="thread-link" onclick={() => onopenthread?.(thread.id)}>
+						<span class="title">{thread.title}</span>
+						<span class="chora-muted meta">
+							{thread.participant_count} participants · {thread.visibility}
+						</span>
+					</button>
+				</li>
+			{/each}
+		</ul>
+	{/if}
+</section>
+
+<style>
+	.section-header {
+		margin-bottom: 2rem;
+	}
+
+	h1 {
+		margin: 0 0 0.35rem;
+		font-size: 1.5rem;
+		font-weight: 500;
+	}
+
+	.intro {
+		margin: 0;
+		max-width: var(--chora-prose);
+	}
+
+	ul {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		max-width: var(--chora-prose);
+	}
+
+	.thread-link {
+		display: block;
+		width: 100%;
+		text-align: left;
+		padding: 0.75rem 0;
+		border: none;
+		border-bottom: 1px solid var(--chora-border);
+		background: transparent;
+		font-family: var(--chora-font);
+		font-size: 1rem;
+		color: inherit;
+	}
+
+	.thread-link:hover {
+		background: var(--chora-accent-soft);
+	}
+
+	.title {
+		display: block;
+		font-weight: 500;
+	}
+
+	.meta {
+		font-size: 0.8rem;
+	}
+</style>
