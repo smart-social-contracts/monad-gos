@@ -4,6 +4,7 @@ import Communication "./agora/Communication";
 import Alignment "./alignment/Coefficient";
 import Grammar "./grammar/Validator";
 import Codex "./codex/codex";
+import Setup "./setup/Setup";
 import Map "mo:core/Map";
 import Iter "mo:core/Iter";
 import Array "mo:core/Array";
@@ -14,7 +15,7 @@ import Nat64 "mo:core/Nat64";
 import Int "mo:core/Int";
 import Time "mo:core/Time";
 
-persistent actor {
+persistent actor Chora {
   stable var stableAgora : Wishes.Stable = {
     currentEpoch = 0;
     nextWishId = 1;
@@ -59,8 +60,19 @@ persistent actor {
   };
   stable var nextMcpPairing : Nat = 1;
   stable var stableMcpPairings : [(Text, { principal : Principal; expires_at : Int })] = [];
+  stable var setupEntered : Bool = false;
+  stable var setupCompleted : Bool = false;
+  stable var setupCreator : Text = "";
+  stable var setupRegistryId : Text = "";
+  stable var setupEnvironment : Text = "";
+  stable var setupCompletedAt : Nat64 = 0;
+  stable var setupDraft : Setup.Draft = Setup.emptyDraft();
+  stable var setupPersonality : Setup.Personality = Setup.emptyPersonality();
+  stable var setupToken : Setup.Token = Setup.emptyToken();
+  stable var setupLogo : Text = "";
 
   type McpPairing = { principal : Principal; expires_at : Int };
+  type Registry = actor { realm_setup_completed : shared (Text) -> async Text };
 
   let mcpPairingTtlNs : Int = 600_000_000_000;
 
@@ -96,6 +108,89 @@ persistent actor {
       spend_cap = grammarSpendCap;
       forbidden_operations = grammarForbiddenOps;
     };
+  };
+
+  func inSetup() : Bool {
+    setupEntered and not setupCompleted;
+  };
+
+  func requireOpen() : ?Types.GggError {
+    if (inSetup()) {
+      ?#forbidden("This realm is being set up and is not yet open to members.");
+    } else {
+      null;
+    };
+  };
+
+  func isSetupAuthorized(caller : Principal) : Bool {
+    let callerText = Principal.toText(caller);
+    if (setupCreator != "" and callerText == setupCreator) {
+      true;
+    } else {
+      switch (adminPrincipal) {
+        case (?admin) Principal.equal(caller, admin);
+        case null false;
+      };
+    };
+  };
+
+  func requireSetupAuthorized(caller : Principal) : ?Types.GggError {
+    if (isSetupAuthorized(caller)) {
+      null;
+    } else {
+      ?#unauthorized;
+    };
+  };
+
+  func gggErrorMessage(err : Types.GggError) : Text {
+    switch (err) {
+      case (#not_found) "not found";
+      case (#unauthorized) "unauthorized";
+      case (#invalid_input msg) msg;
+      case (#conflict msg) msg;
+      case (#forbidden msg) msg;
+    };
+  };
+
+  func escapeJsonText(text : Text) : Text {
+    let withBackslash = Text.replace(text, #text "\\", #text "\\\\");
+    Text.replace(withBackslash, #text "\"", #text "\\\"");
+  };
+
+  func setupJsonOk() : Text {
+    "{\"ok\":true}";
+  };
+
+  func setupJsonErr(err : Types.GggError) : Text {
+    "{\"ok\":false,\"error\":\"" # escapeJsonText(gggErrorMessage(err)) # "\"}";
+  };
+
+  func buildSetupState(caller : Principal) : Setup.State {
+    {
+      entered = setupEntered;
+      completed = setupCompleted;
+      is_caller_authorized = isSetupAuthorized(caller);
+      creator = setupCreator;
+      registry_canister_id = setupRegistryId;
+      environment = setupEnvironment;
+      completed_at = setupCompletedAt;
+      draft = setupDraft;
+      personality = setupPersonality;
+      token = setupToken;
+      logo_data_url = setupLogo;
+    };
+  };
+
+  func notifyRegistrySetupCompleted() : async () {
+    if (Text.size(setupRegistryId) == 0) {
+      return;
+    };
+    let payload =
+      "{\"realm_backend_canister_id\":\"" # Principal.toText(Principal.fromActor(Chora)) # "\"}";
+    try {
+      let registry : Registry = actor (setupRegistryId);
+      ignore await registry.realm_setup_completed(payload);
+    } catch (_) {};
   };
 
   func requireAdmin(caller : Principal) : ?Types.GggError {
@@ -178,6 +273,10 @@ persistent actor {
   };
 
   public shared ({ caller }) func submit_wish(input : Types.SubmitWishInput) : async Types.Result_WishId {
+    switch (requireOpen()) {
+      case (?err) return #err(err);
+      case null {};
+    };
     if (not converseOpen()) {
       return #err(#forbidden("epoch is not open for wishes"));
     };
@@ -193,6 +292,10 @@ persistent actor {
   };
 
   public shared ({ caller }) func seal_epoch() : async Types.Result {
+    switch (requireOpen()) {
+      case (?err) return #err(err);
+      case null {};
+    };
     switch (requireAdmin(caller)) {
       case (?err) #err(err);
       case null {
@@ -209,6 +312,10 @@ persistent actor {
   };
 
   public shared ({ caller }) func record_due_payment() : async () {
+    switch (requireOpen()) {
+      case (?_) return;
+      case null {};
+    };
     Alignment.recordDuePayment(alignmentStore, caller, agora.currentEpoch);
     Codex.creditDues(codexStore, alignmentStore.membershipDue);
   };
@@ -243,6 +350,10 @@ persistent actor {
   };
 
   public shared ({ caller }) func codex_spend(line : Text, amount : Nat) : async Types.Result {
+    switch (requireOpen()) {
+      case (?err) return #err(err);
+      case null {};
+    };
     switch (requireMonad(caller)) {
       case (?err) #err(err);
       case null Codex.spend(codexStore, line, amount);
@@ -283,6 +394,10 @@ persistent actor {
     broadcastId : Types.BroadcastId,
     body : Text,
   ) : async Types.Result_ThreadId {
+    switch (requireOpen()) {
+      case (?err) return #err(err);
+      case null {};
+    };
     if (not converseOpen()) {
       return #err(#forbidden("epoch is not open for thread replies"));
     };
@@ -300,6 +415,10 @@ persistent actor {
     threadId : Types.ThreadId,
     body : Text,
   ) : async Types.Result_ThreadMessageId {
+    switch (requireOpen()) {
+      case (?err) return #err(err);
+      case null {};
+    };
     if (not converseOpen()) {
       return #err(#forbidden("epoch is not open for thread replies"));
     };
@@ -329,6 +448,10 @@ persistent actor {
   public shared ({ caller }) func record_reply_inputs(
     inputs : Types.ReplyInputs,
   ) : async Types.Result {
+    switch (requireOpen()) {
+      case (?err) return #err(err);
+      case null {};
+    };
     switch (requireMonad(caller)) {
       case (?err) #err(err);
       case null {
@@ -348,6 +471,10 @@ persistent actor {
   };
 
   public shared ({ caller }) func post_broadcast(body : Text) : async Types.Result_BroadcastId {
+    switch (requireOpen()) {
+      case (?err) return #err(err);
+      case null {};
+    };
     switch (requireMonad(caller)) {
       case (?err) #err(err);
       case null {
@@ -397,6 +524,10 @@ persistent actor {
   };
 
   public shared ({ caller }) func submit_proposal(input : Types.SubmitProposalInput) : async Types.Result_ProposalId {
+    switch (requireOpen()) {
+      case (?err) return #err(err);
+      case null {};
+    };
     switch (requireMonad(caller)) {
       case (?err) #err(err);
       case null {
@@ -465,6 +596,10 @@ persistent actor {
   };
 
   public shared ({ caller }) func cast_vote(input : Types.CastVoteInput) : async Types.Result_VoteId {
+    switch (requireOpen()) {
+      case (?err) return #err(err);
+      case null {};
+    };
     switch (Map.get(proposals, Text.compare, input.proposal_id)) {
       case null #err(#not_found);
       case (?proposal) {
@@ -516,6 +651,10 @@ persistent actor {
   };
 
   public shared ({ caller }) func create_mcp_pairing() : async Types.Result_Text {
+    switch (requireOpen()) {
+      case (?err) return #err(err);
+      case null {};
+    };
     if (Principal.isAnonymous(caller)) {
       return #err(#unauthorized);
     };
@@ -541,5 +680,86 @@ persistent actor {
         };
       };
     };
+  };
+
+  public shared ({ caller }) func enter_setup(
+    creator : Principal,
+    registryId : Text,
+    environment : Text,
+  ) : async Text {
+    if (setupCompleted) {
+      return setupJsonErr(#conflict("setup already completed"));
+    };
+    let allowed = switch (adminPrincipal) {
+      case (?admin) Principal.equal(caller, admin);
+      case null true;
+    };
+    if (not allowed) {
+      return setupJsonErr(#unauthorized);
+    };
+    let creatorText = Principal.toText(creator);
+    if (setupEntered) {
+      if (setupCreator == creatorText) {
+        return setupJsonOk();
+      };
+      return setupJsonErr(#conflict("setup already entered by another creator"));
+    };
+    switch (adminPrincipal) {
+      case null { adminPrincipal := ?creator };
+      case (?_) {};
+    };
+    setupEntered := true;
+    setupCreator := creatorText;
+    setupRegistryId := registryId;
+    let env = Text.trim(environment, #text " ");
+    if (Text.size(env) > 0) {
+      setupEnvironment := env;
+    };
+    setupJsonOk();
+  };
+
+  public shared query ({ caller }) func get_setup_state() : async Setup.State {
+    buildSetupState(caller);
+  };
+
+  public shared ({ caller }) func save_setup_draft(draft : Setup.Draft) : async Types.Result {
+    if (not inSetup()) {
+      return #err(#forbidden("setup is not active"));
+    };
+    switch (requireSetupAuthorized(caller)) {
+      case (?err) return #err(err);
+      case null {};
+    };
+    switch (Setup.validateDraft(draft)) {
+      case (?message) return #err(#invalid_input(message));
+      case null {};
+    };
+    setupDraft := draft;
+    #ok;
+  };
+
+  public shared ({ caller }) func complete_setup() : async Types.Result {
+    if (not inSetup()) {
+      return #err(#forbidden("setup is not active"));
+    };
+    switch (requireSetupAuthorized(caller)) {
+      case (?err) return #err(err);
+      case null {};
+    };
+    switch (Setup.validateForLaunch(setupDraft)) {
+      case (?message) return #err(#invalid_input(message));
+      case null {};
+    };
+    setupPersonality := setupDraft.personality;
+    setupToken := setupDraft.token;
+    setupLogo := setupDraft.logo_data_url;
+    setupCompleted := true;
+    setupCompletedAt := Types.now();
+    await notifyRegistrySetupCompleted();
+    #ok;
+  };
+
+  public query func get_realm_logo() : async Text {
+    setupLogo;
   };
 };

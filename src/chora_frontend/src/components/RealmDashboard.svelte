@@ -1,7 +1,13 @@
 <script lang="ts">
 	import type { RealmState } from '../lib/types';
 
-	let { data = null }: { data?: RealmState | null } = $props();
+	let {
+		data = null,
+		logoSrc = '',
+	}: {
+		data?: RealmState | null;
+		logoSrc?: string;
+	} = $props();
 
 	const percent = $derived(data ? Math.round(data.alignment.coefficient * 1000) / 10 : null);
 
@@ -12,6 +18,9 @@
 
 <section class="realm" aria-label="Realm dashboard">
 	<header class="section-header">
+		{#if logoSrc}
+			<img class="realm-logo" src={logoSrc} alt="" />
+		{/if}
 		<h1>Realm</h1>
 		<p class="chora-muted intro">
 			The live accounts of Chora, under the Monad’s Codex.
@@ -84,6 +93,16 @@
 <style>
 	.section-header {
 		margin-bottom: 1.25rem;
+	}
+
+	.realm-logo {
+		width: 3rem;
+		height: 3rem;
+		object-fit: contain;
+		margin-bottom: 0.75rem;
+		border: 1px solid var(--chora-border);
+		border-radius: var(--chora-radius);
+		background: var(--chora-surface);
 	}
 
 	h1 {

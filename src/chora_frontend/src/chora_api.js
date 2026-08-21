@@ -175,6 +175,7 @@ const gggIdlFactory = ({ IDL }) => {
 	});
 	const Result_VoteId = IDL.Variant({ ok: IDL.Text, err: gggError });
 	const Result_WishId = IDL.Variant({ ok: IDL.Text, err: gggError });
+	const Result = IDL.Variant({ ok: IDL.Null, err: gggError });
 	const Result_ThreadId = IDL.Variant({ ok: IDL.Text, err: gggError });
 	const Result_ThreadMessageId = IDL.Variant({ ok: IDL.Text, err: gggError });
 	const Result_Text = IDL.Variant({ ok: IDL.Text, err: gggError });
@@ -220,6 +221,36 @@ const gggIdlFactory = ({ IDL }) => {
 		json_mode: IDL.Bool,
 		created_at: IDL.Nat64,
 	});
+	const SetupPersonality = IDL.Record({
+		voice: IDL.Text,
+		stance: IDL.Text,
+		principles: IDL.Vec(IDL.Text),
+		description: IDL.Text,
+	});
+	const SetupToken = IDL.Record({
+		mode: IDL.Text,
+		token_id: IDL.Text,
+		symbol: IDL.Text,
+		canister_id: IDL.Text,
+	});
+	const SetupDraft = IDL.Record({
+		step: IDL.Text,
+		personality: SetupPersonality,
+		token: SetupToken,
+		logo_data_url: IDL.Text,
+	});
+	const SetupState = IDL.Record({
+		entered: IDL.Bool,
+		completed: IDL.Bool,
+		is_caller_authorized: IDL.Bool,
+		creator: IDL.Text,
+		registry_canister_id: IDL.Text,
+		completed_at: IDL.Nat64,
+		draft: SetupDraft,
+		personality: SetupPersonality,
+		token: SetupToken,
+		logo_data_url: IDL.Text,
+	});
 
 	return IDL.Service({
 		ggg_version: IDL.Func([], [IDL.Text], ['query']),
@@ -239,6 +270,10 @@ const gggIdlFactory = ({ IDL }) => {
 		verify_mcp_pairing: IDL.Func([IDL.Text], [IDL.Opt(IDL.Text)], ['query']),
 		get_treasury: IDL.Func([IDL.Text], [IDL.Opt(Treasury)], ['query']),
 		get_realm_state: IDL.Func([], [RealmState], ['query']),
+		get_setup_state: IDL.Func([], [SetupState], ['query']),
+		save_setup_draft: IDL.Func([SetupDraft], [Result], []),
+		complete_setup: IDL.Func([], [Result], []),
+		get_realm_logo: IDL.Func([], [IDL.Text], ['query']),
 	});
 };
 
@@ -769,4 +804,134 @@ export function getConfig() {
 		canisterId: getCanisterId(),
 		host: getHost(),
 	};
+}
+
+function emptySetupDraft() {
+	return {
+		step: 'welcome',
+		personality: {
+			voice: '',
+			stance: '',
+			principles: [],
+			description: '',
+		},
+		token: {
+			mode: 'none',
+			token_id: '',
+			symbol: '',
+			canister_id: '',
+		},
+		logo_data_url: '',
+	};
+}
+
+function mapSetupPersonality(raw) {
+	return {
+		voice: raw.voice,
+		stance: raw.stance,
+		principles: [...raw.principles],
+		description: raw.description,
+	};
+}
+
+function mapSetupToken(raw) {
+	return {
+		mode: raw.mode,
+		token_id: raw.token_id,
+		symbol: raw.symbol,
+		canister_id: raw.canister_id,
+	};
+}
+
+function mapSetupDraft(raw) {
+	return {
+		step: raw.step,
+		personality: mapSetupPersonality(raw.personality),
+		token: mapSetupToken(raw.token),
+		logo_data_url: raw.logo_data_url,
+	};
+}
+
+function mapSetupState(raw) {
+	return {
+		entered: Boolean(raw.entered),
+		completed: Boolean(raw.completed),
+		is_caller_authorized: Boolean(raw.is_caller_authorized),
+		creator: raw.creator,
+		registry_canister_id: raw.registry_canister_id,
+		completed_at: Number(raw.completed_at),
+		draft: mapSetupDraft(raw.draft),
+		personality: mapSetupPersonality(raw.personality),
+		token: mapSetupToken(raw.token),
+		logo_data_url: raw.logo_data_url,
+	};
+}
+
+function toSetupDraftRaw(draft) {
+	return {
+		step: draft.step,
+		personality: {
+			voice: draft.personality.voice,
+			stance: draft.personality.stance,
+			principles: draft.personality.principles,
+			description: draft.personality.description,
+		},
+		token: {
+			mode: draft.token.mode,
+			token_id: draft.token.token_id,
+			symbol: draft.token.symbol,
+			canister_id: draft.token.canister_id,
+		},
+		logo_data_url: draft.logo_data_url,
+	};
+}
+
+/** @returns {Promise<import('./lib/types.ts').SetupState>} */
+export async function getSetupState() {
+	if (isMockMode()) {
+		await delay();
+		const draft = emptySetupDraft();
+		return {
+			entered: false,
+			completed: true,
+			is_caller_authorized: true,
+			creator: '',
+			registry_canister_id: '',
+			completed_at: 0,
+			draft,
+			personality: draft.personality,
+			token: draft.token,
+			logo_data_url: '',
+		};
+	}
+	const actor = await getQueryActor();
+	return mapSetupState(await actor.get_setup_state());
+}
+
+/** @param {import('./lib/types.ts').SetupDraft} draft */
+export async function saveSetupDraft(draft) {
+	if (isMockMode()) return;
+	const actor = await getUpdateActor();
+	const result = await actor.save_setup_draft(toSetupDraftRaw(draft));
+	if ('err' in result) {
+		throw new Error(`save_setup_draft failed: ${JSON.stringify(result.err)}`);
+	}
+}
+
+export async function completeSetup() {
+	if (isMockMode()) return;
+	const actor = await getUpdateActor();
+	const result = await actor.complete_setup();
+	if ('err' in result) {
+		throw new Error(`complete_setup failed: ${JSON.stringify(result.err)}`);
+	}
+}
+
+export async function getRealmLogo() {
+	if (isMockMode()) {
+		await delay();
+		return '';
+	}
+	const actor = await getQueryActor();
+	return await actor.get_realm_logo();
 }

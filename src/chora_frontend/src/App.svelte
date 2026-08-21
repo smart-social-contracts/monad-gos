@@ -1,22 +1,23 @@
 <script lang="ts">
 	import type {
-		AlignmentData,
 		BroadcastMessage,
 		ConnectionStatus,
 		EpochStatus,
 		ProposalView,
 		RealmState,
 		ReplyInputs,
+		SetupState,
 		ThreadMessage,
 		ThreadSummary,
 		View,
 	} from './lib/types';
 	import {
-		alignmentCoefficient,
 		castVote,
 		checkConnection,
 		configureChoraRuntime,
 		getEpochStatus,
+		getRealmLogo,
+		getSetupState,
 		isMockMode,
 		listProposals,
 		listThreads,
@@ -47,7 +48,6 @@
 	} from './lib/portal-bridge.ts';
 	import AppHeader from './components/AppHeader.svelte';
 	import EpochStatusLine from './components/EpochStatusLine.svelte';
-	import AlignmentCoefficient from './components/AlignmentCoefficient.svelte';
 	import Broadcast from './components/Broadcast.svelte';
 	import ThreadView from './components/ThreadView.svelte';
 	import VotingArea from './components/VotingArea.svelte';
@@ -57,6 +57,7 @@
 	import ReplyInputsPage from './components/ReplyInputsPage.svelte';
 	import RealmDashboard from './components/RealmDashboard.svelte';
 	import Settings from './components/Settings.svelte';
+	import SetupWizard from './components/SetupWizard.svelte';
 
 	const MONAD_ERROR =
 		'The Monad could not be reached. Check your connection, or try again later.';
@@ -68,12 +69,14 @@
 	let connectionStatus = $state<ConnectionStatus>('connecting');
 
 	let epochStatus = $state<EpochStatus | null>(null);
-	let alignment = $state<AlignmentData | null>(null);
 	let broadcasts = $state<BroadcastMessage[]>([]);
 	let publicThreads = $state<ThreadSummary[]>([]);
 	let allThreads = $state<ThreadSummary[]>([]);
 	let proposals = $state<ProposalView[]>([]);
 	let realmState = $state<RealmState | null>(null);
+	let setupState = $state<SetupState | null>(null);
+	let setupActive = $state(false);
+	let realmLogo = $state('');
 
 	let activeThreadId = $state<string | null>(null);
 	let activeThread = $state<ThreadSummary | null>(null);
@@ -85,16 +88,45 @@
 	let activeInputsId = $state<string | null>(null);
 	let activeInputs = $state<ReplyInputs | null>(null);
 	let inputsMissing = $state(false);
+
+	let wishPrompt = $state(false);
+	let wishConfirmation = $state<string | null>(null);
+	let wishError = $state<string | null>(null);
+	let threadReplyPrompt = $state(false);
+
 	const monadAuthor = monadPrincipal();
 
 	let isLoggedIn = $state(isMockMode());
 	let principalShort = $state(isMockMode() ? 'citizen-mock' : '');
 
 	const needsAuth = $derived(!isMockMode() && !isLoggedIn);
+	const showComposer = $derived(view === 'broadcast' || view === 'thread');
+	const composerPlaceholder = $derived(
+		view === 'thread'
+			? 'Continue the conversation…'
+			: replyBroadcastId
+				? 'Write a reply… · opens a thread'
+				: 'Write a wish…',
+	);
+	const composerSubmitLabel = $derived(
+		view === 'thread' ? 'Send' : replyBroadcastId ? 'Open thread' : 'Send',
+	);
+	const composerFieldId = $derived(
+		view === 'thread'
+			? 'chora-thread-composer'
+			: replyBroadcastId
+				? 'chora-reply-composer'
+				: 'chora-wish-composer',
+	);
 
 	function refreshAuthState() {
 		isLoggedIn = !isAnonymous();
 		principalShort = isLoggedIn ? formatPrincipalShort(getPrincipalText()) : '';
+	}
+
+	function cancelReply() {
+		replyBroadcastId = null;
+		replyPrompt = false;
 	}
 
 	async function handleLogin() {
@@ -103,7 +135,17 @@
 			resetActors();
 			refreshAuthState();
 			replyPrompt = false;
-			await loadCore();
+			wishPrompt = false;
+			threadReplyPrompt = false;
+			if (setupActive) {
+				try {
+					setupState = await getSetupState();
+				} catch (e) {
+					error = e instanceof Error ? e.message : 'Failed to read setup state';
+				}
+			} else {
+				await loadCore();
+			}
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Sign in failed';
 		}
@@ -118,21 +160,48 @@
 		}
 	}
 
+	async function loadRealmLogo() {
+		try {
+			const logo = await getRealmLogo();
+			if (logo) {
+				realmLogo = logo;
+				return;
+			}
+		} catch {
+			/* logo query is optional */
+		}
+		if (setupState?.logo_data_url) {
+			realmLogo = setupState.logo_data_url;
+		}
+	}
+
+	async function handleSetupComplete() {
+		setupActive = false;
+		try {
+			setupState = await getSetupState();
+		} catch {
+			/* best-effort refresh */
+		}
+		await loadCore();
+		await loadRealmLogo();
+		if (isEmbeddedInPortal()) {
+			portalUiReady();
+		}
+	}
+
 	async function loadCore() {
 		loading = true;
 		error = null;
 		monadError = null;
 		try {
-			const [epoch, align, broadcast, proposalList, threadList, realm] = await Promise.all([
+			const [epoch, broadcast, proposalList, threadList, realm] = await Promise.all([
 				getEpochStatus(),
-				alignmentCoefficient(),
 				readBroadcast(),
 				listProposals(),
 				listThreads(),
 				getRealmState(),
 			]);
 			epochStatus = epoch;
-			alignment = align;
 			broadcasts = broadcast.broadcasts;
 			publicThreads = broadcast.public_threads;
 			proposals = proposalList;
@@ -179,7 +248,28 @@
 		}
 
 		connectionStatus = 'connected';
+
+		try {
+			setupState = await getSetupState();
+			if (setupState.entered && !setupState.completed) {
+				setupActive = true;
+				loading = false;
+				if (isEmbeddedInPortal()) {
+					portalUiReady();
+				}
+				return;
+			}
+		} catch (e) {
+			const message = e instanceof Error ? e.message : 'Failed to read setup state';
+			error = message;
+			monadError = MONAD_ERROR;
+			connectionStatus = 'error';
+			loading = false;
+			return;
+		}
+
 		await loadCore();
+		await loadRealmLogo();
 		if (isEmbeddedInPortal()) {
 			portalUiReady();
 		}
@@ -290,11 +380,55 @@
 		}
 	}
 
+	async function handleThreadReply(body: string) {
+		if (needsAuth) {
+			threadReplyPrompt = true;
+			return;
+		}
+		threadReplyPrompt = false;
+		try {
+			await submitThreadReply(body);
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Reply failed';
+			throw e;
+		}
+	}
+
 	async function handleWish(body: string) {
 		if (!epochStatus) {
 			throw new Error('Epoch status is not available.');
 		}
-		return submitWish('governance', body, epochStatus.epoch_id);
+		wishPrompt = false;
+		wishError = null;
+		const result = await submitWish('governance', body, epochStatus.epoch_id);
+		const wishId =
+			result && typeof result === 'object' && 'wish_id' in result
+				? String((result as { wish_id: string }).wish_id)
+				: undefined;
+		wishConfirmation = wishId
+			? `Wish sealed (${wishId}). The Monad will read it when this epoch ends.`
+			: 'Wish sealed. The Monad will read it when this epoch ends.';
+	}
+
+	async function handleComposerSubmit(body: string) {
+		if (view === 'thread') {
+			await handleThreadReply(body);
+			return;
+		}
+		if (replyBroadcastId) {
+			await handleBroadcastReply(body);
+			return;
+		}
+		if (needsAuth) {
+			wishPrompt = true;
+			return;
+		}
+		try {
+			await handleWish(body);
+		} catch (e) {
+			wishConfirmation = null;
+			wishError = e instanceof Error ? e.message : 'Your wish could not be sent.';
+		}
 	}
 
 	async function handleVote(proposalId: string, choice: 'yes' | 'no' | 'abstain') {
@@ -373,7 +507,15 @@
 		const onPortalAuth = async () => {
 			resetActors();
 			refreshAuthState();
-			await loadCore();
+			if (setupActive) {
+				try {
+					setupState = await getSetupState();
+				} catch {
+					/* keep current setup gate */
+				}
+			} else {
+				await loadCore();
+			}
 		};
 		window.addEventListener('portal:auth', onPortalAuth);
 		window.addEventListener('hashchange', applyInputsHash);
@@ -381,9 +523,9 @@
 		bootstrap();
 
 		const interval = setInterval(async () => {
+			if (setupActive) return;
 			try {
 				epochStatus = await getEpochStatus();
-				alignment = await alignmentCoefficient();
 			} catch {
 				/* background refresh — ignore */
 			}
@@ -399,174 +541,254 @@
 </script>
 
 <div class="chora-app">
-	<AppHeader
-		connectionStatus={connectionStatus}
-		isLoggedIn={isLoggedIn}
-		principalShort={principalShort}
-		onlogin={handleLogin}
-		onlogout={handleLogout}
-		onsettings={goSettings}
-	/>
-
-	{#if epochStatus}
-		<EpochStatusLine
-			epochId={epochStatus.epoch_id}
-			phase={epochStatus.phase}
-			countdownSeconds={epochStatus.seconds_until_seal}
-		/>
-	{/if}
-
-	<div class="shell">
-		<nav class="nav" aria-label="Chora sections">
-			<button
-				type="button"
-				class="nav-btn"
-				class:active={view === 'broadcast'}
-				onclick={goBroadcast}
-			>
-				Broadcast
-			</button>
-			<button
-				type="button"
-				class="nav-btn"
-				class:active={view === 'voting'}
-				onclick={goProposals}
-			>
-				Proposals
-			</button>
-			<button
-				type="button"
-				class="nav-btn"
-				class:active={view === 'threads'}
-				onclick={goThreads}
-			>
-				Threads
-			</button>
-			<button
-				type="button"
-				class="nav-btn"
-				class:active={view === 'realm'}
-				onclick={goRealm}
-			>
-				Realm
-			</button>
-			{#if isMockMode() && !isEmbeddedInPortal()}
-				<span class="mock-badge chora-muted">Mock data</span>
+	{#if setupActive}
+		<div class="setup-shell">
+			{#if loading}
+				<p class="chora-muted">Loading setup…</p>
+			{:else if needsAuth}
+				<section class="setup-gate chora-prose">
+					<h1>Founding this realm</h1>
+					<p class="chora-muted">Sign in as the founder to continue setup.</p>
+					<LoginPrompt message="Sign in to continue setup." onlogin={handleLogin} />
+				</section>
+			{:else if setupState?.is_caller_authorized}
+				<SetupWizard draft={setupState.draft} oncomplete={handleSetupComplete} />
+			{:else}
+				<section class="setup-gate chora-prose">
+					<p>This realm is being set up and is not yet open.</p>
+				</section>
 			{/if}
-		</nav>
-
-		<div class="layout">
-			<main class="main">
-				{#if loading}
-					<p class="chora-muted">Loading Chora…</p>
-				{:else if error && connectionStatus === 'error'}
-					<p class="error">{error}</p>
-					<button type="button" class="chora-btn" onclick={bootstrap}>Retry</button>
-				{:else if view === 'broadcast'}
-					{#if error}
-						<p class="error">{error}</p>
-					{/if}
-					<Broadcast
-						broadcasts={broadcasts}
-						publicThreads={publicThreads}
-						monadError={monadError}
-						needsAuth={needsAuth}
-						onreply={startReplyToBroadcast}
-						onopenthread={openThread}
-						onsubmitwish={handleWish}
-						onlogin={handleLogin}
-					/>
-					{#if replyBroadcastId}
-						<div class="reply-panel">
-							<h2 class="reply-title">Your reply</h2>
-							<p class="chora-muted">This opens a private thread with the Monad.</p>
-							<MessageComposer
-								placeholder="Write your response…"
-								submitLabel="Open thread"
-								fieldId="chora-reply-composer"
-								onsubmit={handleBroadcastReply}
-							/>
-							{#if replyPrompt}
-								<LoginPrompt message="Sign in to reply." onlogin={handleLogin} />
-							{/if}
-						</div>
-					{/if}
-				{:else if view === 'thread'}
-					<ThreadView
-						thread={activeThread}
-						messages={activeMessages}
-						needsAuth={needsAuth}
-						monadAuthor={monadAuthor}
-						awaitingMonad={awaitingMonad}
-						onback={goBroadcast}
-						onreply={submitThreadReply}
-						onlogin={handleLogin}
-						onopeninputs={openInputs}
-					/>
-				{:else if view === 'inputs'}
-					<ReplyInputsPage
-						inputs={activeInputs}
-						missing={inputsMissing}
-						onback={closeInputs}
-					/>
-				{:else if view === 'threads'}
-					<ThreadsList threads={allThreads} onopenthread={openThread} />
-				{:else if view === 'realm'}
-					<RealmDashboard data={realmState} />
-				{:else if view === 'settings'}
-					<Settings needsAuth={needsAuth} onlogin={handleLogin} />
-				{:else}
-					<VotingArea
-						proposals={proposals}
-						needsAuth={needsAuth}
-						onopenthread={openThread}
-						onvote={handleVote}
-						onlogin={handleLogin}
-					/>
-				{/if}
-			</main>
-
-			<aside class="sidebar">
-				<AlignmentCoefficient data={alignment} />
-			</aside>
 		</div>
-	</div>
+	{:else}
+		<div class="chat-shell">
+			<div class="chat-column">
+				<div class="floating-chrome" aria-label="Chora navigation">
+					<AppHeader
+						connectionStatus={connectionStatus}
+						isLoggedIn={isLoggedIn}
+						principalShort={principalShort}
+						logoSrc={realmLogo}
+						onlogin={handleLogin}
+						onlogout={handleLogout}
+						onsettings={goSettings}
+					/>
 
-	<footer class="footer chora-muted">
-		Chora · a GGG-compliant GOS · the Monad proposes, the citizens ratify
-	</footer>
+					<nav class="nav" aria-label="Chora sections">
+						<button
+							type="button"
+							class="nav-btn"
+							class:active={view === 'broadcast'}
+							onclick={goBroadcast}
+						>
+							Broadcast
+						</button>
+						<button
+							type="button"
+							class="nav-btn"
+							class:active={view === 'voting'}
+							onclick={goProposals}
+						>
+							Proposals
+						</button>
+						<button
+							type="button"
+							class="nav-btn"
+							class:active={view === 'threads'}
+							onclick={goThreads}
+						>
+							Threads
+						</button>
+						<button
+							type="button"
+							class="nav-btn"
+							class:active={view === 'realm'}
+							onclick={goRealm}
+						>
+							Realm
+						</button>
+						{#if isMockMode() && !isEmbeddedInPortal()}
+							<span class="mock-badge chora-muted">Mock</span>
+						{/if}
+					</nav>
+
+					{#if epochStatus}
+						<EpochStatusLine
+							epochId={epochStatus.epoch_id}
+							phase={epochStatus.phase}
+							countdownSeconds={epochStatus.seconds_until_seal}
+						/>
+					{/if}
+				</div>
+
+				<main class="chat-scroll">
+					<div class="chat-content">
+						{#if loading}
+							<p class="chora-muted">Loading Chora…</p>
+						{:else if error && connectionStatus === 'error'}
+							<p class="error">{error}</p>
+							<button type="button" class="chora-btn" onclick={bootstrap}>Retry</button>
+						{:else if view === 'broadcast'}
+							{#if error}
+								<p class="error">{error}</p>
+							{/if}
+							<Broadcast
+								broadcasts={broadcasts}
+								publicThreads={publicThreads}
+								monadError={monadError}
+								needsAuth={needsAuth}
+								onreply={startReplyToBroadcast}
+								onopenthread={openThread}
+								onlogin={handleLogin}
+							/>
+						{:else if view === 'thread'}
+							<ThreadView
+								thread={activeThread}
+								messages={activeMessages}
+								monadAuthor={monadAuthor}
+								awaitingMonad={awaitingMonad}
+								onback={goBroadcast}
+								onopeninputs={openInputs}
+							/>
+						{:else if view === 'inputs'}
+							<ReplyInputsPage
+								inputs={activeInputs}
+								missing={inputsMissing}
+								onback={closeInputs}
+							/>
+						{:else if view === 'threads'}
+							<ThreadsList threads={allThreads} onopenthread={openThread} />
+						{:else if view === 'realm'}
+							<RealmDashboard data={realmState} logoSrc={realmLogo} />
+						{:else if view === 'settings'}
+							<Settings needsAuth={needsAuth} onlogin={handleLogin} />
+						{:else}
+							<VotingArea
+								proposals={proposals}
+								needsAuth={needsAuth}
+								onopenthread={openThread}
+								onvote={handleVote}
+								onlogin={handleLogin}
+							/>
+						{/if}
+					</div>
+				</main>
+
+				{#if showComposer}
+					<div class="composer-dock">
+						{#if view === 'broadcast' && replyBroadcastId}
+							<div class="composer-meta">
+								<span class="chora-muted">Replying · opens a private thread</span>
+								<button type="button" class="cancel-reply" onclick={cancelReply}>Cancel</button>
+							</div>
+						{/if}
+						{#if view === 'broadcast' && wishConfirmation}
+							<p class="composer-status" role="status" aria-live="polite">{wishConfirmation}</p>
+						{/if}
+						{#if view === 'broadcast' && wishError}
+							<p class="composer-error" role="alert">{wishError}</p>
+						{/if}
+						<MessageComposer
+							placeholder={composerPlaceholder}
+							submitLabel={composerSubmitLabel}
+							fieldId={composerFieldId}
+							onsubmit={handleComposerSubmit}
+						/>
+						{#if view === 'broadcast' && (wishPrompt || replyPrompt)}
+							<LoginPrompt
+								message={replyBroadcastId ? 'Sign in to reply.' : 'Sign in to send a wish.'}
+								onlogin={handleLogin}
+							/>
+						{/if}
+						{#if view === 'thread' && threadReplyPrompt}
+							<LoginPrompt message="Sign in to reply." onlogin={handleLogin} />
+						{/if}
+					</div>
+				{/if}
+			</div>
+		</div>
+	{/if}
 </div>
 
 <style>
 	.chora-app {
-		min-height: 100vh;
+		height: 100dvh;
+		overflow: hidden;
+		background: var(--chora-bg);
 	}
 
-	.shell {
-		max-width: 72rem;
+	.setup-shell {
+		max-width: 42rem;
 		margin: 0 auto;
-		padding: 1.5rem 1.25rem 2rem;
+		padding: 2rem 1.25rem;
+		height: 100%;
+		overflow-y: auto;
 	}
 
-	.nav {
+	.setup-gate h1 {
+		margin: 0 0 0.75rem;
+		font-size: 1.5rem;
+		font-weight: 500;
+	}
+
+	.setup-gate p {
+		margin: 0;
+	}
+
+	.chat-shell {
+		height: 100%;
 		display: flex;
+		justify-content: center;
+	}
+
+	.chat-column {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		width: 100%;
+		max-width: var(--chora-prose);
+		height: 100%;
+	}
+
+	.floating-chrome {
+		position: absolute;
+		top: 0.75rem;
+		left: 0.75rem;
+		right: 0.75rem;
+		z-index: 10;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+		grid-template-areas: 'brand nav auth';
 		align-items: center;
-		gap: 0.5rem;
-		margin-bottom: 2rem;
+		gap: 0.5rem 0.75rem;
+		padding: 0.45rem 0.65rem;
+		border: 1px solid color-mix(in srgb, var(--chora-border) 80%, transparent);
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--chora-surface) 88%, transparent);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
 		font-family: var(--chora-font-ui);
 	}
 
+	.nav {
+		grid-area: nav;
+		display: flex;
+		align-items: center;
+		gap: 0.15rem;
+		justify-self: center;
+	}
+
 	.nav-btn {
-		padding: 0.4rem 0.85rem;
+		padding: 0.28rem 0.55rem;
 		border: 1px solid transparent;
-		border-radius: var(--chora-radius);
+		border-radius: 999px;
 		background: transparent;
-		font-size: 0.9rem;
+		font-size: 0.72rem;
 		color: var(--chora-text-muted);
+		white-space: nowrap;
 	}
 
 	.nav-btn:hover {
-		background: var(--chora-accent-soft);
+		background: color-mix(in srgb, var(--chora-accent-soft) 70%, transparent);
 		color: var(--chora-text);
 	}
 
@@ -577,38 +799,70 @@
 	}
 
 	.mock-badge {
-		margin-left: auto;
+		margin-left: 0.25rem;
+		font-size: 0.6rem;
+	}
+
+	.floating-chrome :global(.epoch-chip) {
+		position: absolute;
+		top: calc(100% + 0.35rem);
+		right: 0;
+	}
+
+	.chat-scroll {
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+		padding: 6.25rem 0.75rem 0;
+		scrollbar-gutter: stable;
+	}
+
+	.chat-content {
+		padding-bottom: 1rem;
+	}
+
+	.composer-dock {
+		flex-shrink: 0;
+		padding: 0.5rem 0.75rem 0.85rem;
+		background: linear-gradient(to top, var(--chora-bg) 75%, transparent);
+	}
+
+	.composer-meta {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		margin-bottom: 0.35rem;
 		font-size: 0.75rem;
 	}
 
-	.layout {
-		display: grid;
-		grid-template-columns: 1fr 14rem;
-		gap: 2.5rem;
-		align-items: start;
-	}
-
-	.main {
-		min-width: 0;
-	}
-
-	.sidebar {
-		position: sticky;
-		top: 1rem;
-	}
-
-	.reply-panel {
-		margin-top: 2rem;
-		padding-top: 2rem;
-		border-top: 1px solid var(--chora-border);
-		max-width: var(--chora-prose);
-	}
-
-	.reply-title {
-		margin: 0 0 0.25rem;
-		font-size: 1rem;
+	.cancel-reply {
+		border: none;
+		background: transparent;
+		padding: 0;
 		font-family: var(--chora-font-ui);
-		font-weight: 600;
+		font-size: 0.75rem;
+		color: var(--chora-text-muted);
+		text-decoration: underline;
+		text-underline-offset: 0.15em;
+	}
+
+	.cancel-reply:hover {
+		color: var(--chora-text);
+	}
+
+	.composer-status {
+		margin: 0 0 0.35rem;
+		font-family: var(--chora-font-ui);
+		font-size: 0.8rem;
+		color: var(--chora-text);
+	}
+
+	.composer-error {
+		margin: 0 0 0.35rem;
+		font-family: var(--chora-font-ui);
+		font-size: 0.8rem;
+		color: var(--chora-no);
 	}
 
 	.error {
@@ -616,22 +870,24 @@
 		margin-bottom: 0.75rem;
 	}
 
-	.footer {
-		text-align: center;
-		padding: 2rem 1.25rem 2.5rem;
-		font-family: var(--chora-font-ui);
-		font-size: 0.75rem;
-		border-top: 1px solid var(--chora-border);
-	}
-
-	@media (max-width: 768px) {
-		.layout {
-			grid-template-columns: 1fr;
+	@media (max-width: 640px) {
+		.floating-chrome {
+			grid-template-columns: 1fr 1fr;
+			grid-template-areas:
+				'brand auth'
+				'nav nav';
+			border-radius: calc(var(--chora-radius) + 4px);
+			padding: 0.5rem 0.6rem;
 		}
 
-		.sidebar {
-			order: -1;
-			position: static;
+		.nav {
+			justify-self: stretch;
+			justify-content: center;
+			flex-wrap: wrap;
+		}
+
+		.chat-scroll {
+			padding-top: 7.5rem;
 		}
 	}
 </style>

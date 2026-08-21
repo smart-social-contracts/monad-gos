@@ -26,9 +26,9 @@
 	}
 </script>
 
-<article class="message" class:monad={isMonad} class:system={isSystem}>
+<article class="bubble" class:monad={isMonad} class:system={isSystem} class:self={!isMonad && !isSystem}>
 	<header>
-		<span class="author">{isMonad ? 'Monad' : message.author}</span>
+		<span class="author">{isMonad ? 'Monad' : isSystem ? 'System' : 'You'}</span>
 		<time class="chora-muted" datetime={new Date(message.created_at * 1000).toISOString()}>
 			{formatTime(message.created_at)}
 		</time>
@@ -37,51 +37,57 @@
 	{#if isMonad}
 		<p class="repro">
 			<button type="button" class="repro-link" onclick={() => onopeninputs?.(message.id)}>
-				Inputs for reproducibility
+				Inputs
 			</button>
 		</p>
 	{/if}
 </article>
 
 <style>
-	.message {
-		padding: 1rem 0;
-		border-bottom: 1px solid var(--chora-border);
+	.bubble {
+		align-self: flex-start;
+		max-width: 92%;
+		padding: 0.75rem 0.9rem;
+		border-radius: calc(var(--chora-radius) + 4px);
+		background: var(--chora-surface);
 	}
 
-	.message:last-child {
-		border-bottom: none;
+	.bubble.self {
+		align-self: flex-end;
+		background: color-mix(in srgb, var(--chora-accent-soft) 55%, var(--chora-surface));
 	}
 
-	.message header {
+	.bubble header {
 		display: flex;
 		justify-content: space-between;
 		align-items: baseline;
-		gap: 1rem;
+		gap: 0.75rem;
 		margin-bottom: 0.35rem;
 		font-family: var(--chora-font-ui);
-		font-size: 0.8rem;
+		font-size: 0.7rem;
 	}
 
 	.author {
 		font-weight: 600;
 	}
 
-	.message p {
+	.bubble p {
 		margin: 0;
+		font-size: 0.95rem;
+		line-height: 1.55;
 	}
 
-	.message.monad .author {
+	.bubble.monad .author {
 		color: var(--chora-monad);
 	}
 
-	.message.system {
+	.bubble.system {
 		opacity: 0.7;
 		font-size: 0.9rem;
 	}
 
 	.repro {
-		margin: 0.5rem 0 0;
+		margin: 0.45rem 0 0;
 	}
 
 	.repro-link {
@@ -89,7 +95,7 @@
 		background: transparent;
 		padding: 0;
 		font-family: var(--chora-font-ui);
-		font-size: 0.8rem;
+		font-size: 0.75rem;
 		color: var(--chora-text-muted);
 		text-decoration: underline;
 		text-underline-offset: 0.15em;

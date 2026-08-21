@@ -241,6 +241,41 @@ type ReplyInputs = record {
   created_at : Timestamp;
 };
 
+type SetupPersonality = record {
+  voice : text;
+  stance : text;
+  principles : vec text;
+  description : text;
+};
+
+type SetupToken = record {
+  mode : text;
+  token_id : text;
+  symbol : text;
+  canister_id : text;
+};
+
+type SetupDraft = record {
+  step : text;
+  personality : SetupPersonality;
+  token : SetupToken;
+  logo_data_url : text;
+};
+
+type SetupState = record {
+  entered : bool;
+  completed : bool;
+  is_caller_authorized : bool;
+  creator : text;
+  registry_canister_id : text;
+  environment : text;
+  completed_at : Timestamp;
+  draft : SetupDraft;
+  personality : SetupPersonality;
+  token : SetupToken;
+  logo_data_url : text;
+};
+
 service : {
   // GGG v0.2.0 — slim scope
   "ggg_version" : () -> (text) query;
@@ -279,4 +314,11 @@ service : {
   "get_realm_state" : () -> (RealmState) query;
   "set_codex_commit" : (text) -> (Result);
   "codex_spend" : (text, nat) -> (Result);
+
+  // Chora in-realm setup wizard
+  "enter_setup" : (principal, text, text) -> (text);
+  "get_setup_state" : () -> (SetupState) query;
+  "save_setup_draft" : (SetupDraft) -> (Result);
+  "complete_setup" : () -> (Result);
+  "get_realm_logo" : () -> (text) query;
 };

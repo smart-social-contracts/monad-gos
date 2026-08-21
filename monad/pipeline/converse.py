@@ -27,25 +27,52 @@ def format_history(messages: list[dict[str, Any]], monad_principal: str) -> str:
     return "\n".join(lines)
 
 
-def build_prompt(messages: list[dict[str, Any]], monad_principal: str) -> str:
+def build_prompt(
+    messages: list[dict[str, Any]],
+    monad_principal: str,
+    personality: dict | None = None,
+) -> str:
     history = format_history(messages, monad_principal)
-    return f"{SYSTEM_PROMPT}\n\nConversation so far:\n{history}\n\nMonad:"
+    prompt = SYSTEM_PROMPT
+    if personality:
+        voice = str(personality.get("voice", "")).strip()
+        stance = str(personality.get("stance", "")).strip()
+        description = str(personality.get("description", "")).strip()
+        principles = personality.get("principles") or []
+        if isinstance(principles, list):
+            principle_text = ", ".join(str(p).strip() for p in principles if str(p).strip())
+        else:
+            principle_text = ""
+        lines = ["Founding personality:"]
+        if voice:
+            lines.append(f"Voice: {voice}")
+        if stance:
+            lines.append(f"Stance: {stance}")
+        if principle_text:
+            lines.append(f"Principles: {principle_text}")
+        if description:
+            lines.append(f"Description: {description}")
+        if len(lines) > 1:
+            prompt = f"{SYSTEM_PROMPT}\n\n" + "\n".join(lines)
+    return f"{prompt}\n\nConversation so far:\n{history}\n\nMonad:"
 
 
 def generate_reply(
     engine: LLMEngine,
     messages: list[dict[str, Any]],
     monad_principal: str,
+    personality: dict | None = None,
 ) -> str:
-    return generate_reply_bundle(engine, messages, monad_principal)["body"]
+    return generate_reply_bundle(engine, messages, monad_principal, personality)["body"]
 
 
 def generate_reply_bundle(
     engine: LLMEngine,
     messages: list[dict[str, Any]],
     monad_principal: str,
+    personality: dict | None = None,
 ) -> dict[str, Any]:
-    prompt = build_prompt(messages, monad_principal)
+    prompt = build_prompt(messages, monad_principal, personality)
     text = engine.complete_text(prompt).strip()
     if text.startswith("Monad:"):
         text = text[len("Monad:") :].strip()

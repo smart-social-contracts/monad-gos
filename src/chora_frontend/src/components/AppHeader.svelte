@@ -5,6 +5,7 @@
 		connectionStatus = 'connecting' as ConnectionStatus,
 		isLoggedIn = false,
 		principalShort = '',
+		logoSrc = '',
 		onlogin,
 		onlogout,
 		onsettings,
@@ -12,6 +13,7 @@
 		connectionStatus?: ConnectionStatus;
 		isLoggedIn?: boolean;
 		principalShort?: string;
+		logoSrc?: string;
 		onlogin?: () => void | Promise<void>;
 		onlogout?: () => void | Promise<void>;
 		onsettings?: () => void;
@@ -26,55 +28,72 @@
 	);
 </script>
 
-<header class="app-header">
-	<div class="brand">Chora</div>
-
-	<div
-		class="status"
-		class:connected={connectionStatus === 'connected'}
-		class:error={connectionStatus === 'error'}
-		role="status"
-		aria-live="polite"
-	>
-		{statusLabel}
+<div class="app-header">
+	<div class="brand">
+		{#if logoSrc}
+			<img class="brand-logo" src={logoSrc} alt="" />
+		{/if}
+		<span class="brand-name">Chora</span>
+		<span
+			class="status"
+			class:connected={connectionStatus === 'connected'}
+			class:error={connectionStatus === 'error'}
+			role="status"
+			aria-live="polite"
+		>
+			{statusLabel}
+		</span>
 	</div>
 
 	<div class="auth">
 		{#if isLoggedIn}
 			<span class="principal chora-muted">{principalShort}</span>
-			<button type="button" class="chora-btn chora-btn-ghost" onclick={() => onsettings?.()}>
+			<button type="button" class="chora-btn chora-btn-ghost auth-btn" onclick={() => onsettings?.()}>
 				Settings
 			</button>
-			<button type="button" class="chora-btn chora-btn-ghost" onclick={() => onlogout?.()}>
+			<button type="button" class="chora-btn chora-btn-ghost auth-btn" onclick={() => onlogout?.()}>
 				Sign out
 			</button>
 		{:else}
-			<button type="button" class="chora-btn" onclick={() => onlogin?.()}>
+			<button type="button" class="chora-btn auth-btn" onclick={() => onlogin?.()}>
 				Sign in
 			</button>
 		{/if}
 	</div>
-</header>
+</div>
 
 <style>
 	.app-header {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		padding: 0.65rem 1.25rem;
-		border-bottom: 1px solid var(--chora-border);
-		background: var(--chora-surface);
-		font-family: var(--chora-font-ui);
-		font-size: 0.8rem;
+		display: contents;
 	}
 
 	.brand {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		grid-area: brand;
+		font-family: var(--chora-font-ui);
 		font-weight: 600;
-		font-size: 0.95rem;
+		font-size: 0.9rem;
 		color: var(--chora-text);
+		min-width: 0;
+	}
+
+	.brand-logo {
+		width: 1.2rem;
+		height: 1.2rem;
+		object-fit: contain;
+		border-radius: 3px;
+		flex-shrink: 0;
+	}
+
+	.brand-name {
+		flex-shrink: 0;
 	}
 
 	.status {
+		font-weight: 400;
+		font-size: 0.65rem;
 		color: var(--chora-text-muted);
 		font-variant-numeric: tabular-nums;
 	}
@@ -90,12 +109,23 @@
 	.auth {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		margin-left: auto;
+		gap: 0.25rem;
+		grid-area: auth;
+		justify-self: end;
+		min-width: 0;
+	}
+
+	.auth-btn {
+		padding: 0.3rem 0.55rem;
+		font-size: 0.75rem;
 	}
 
 	.principal {
-		font-size: 0.75rem;
+		font-size: 0.65rem;
 		font-variant-numeric: tabular-nums;
+		max-width: 5rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 </style>

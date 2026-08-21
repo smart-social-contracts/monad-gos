@@ -34,28 +34,56 @@
 	<label class="sr-only" for={fieldId}>Message</label>
 	<textarea
 		id={fieldId}
-		class="chora-textarea"
+		class="composer-input"
 		placeholder={placeholder}
 		bind:value={text}
 		disabled={disabled || sending}
-		rows="3"
+		rows="1"
 	></textarea>
-	<div class="actions">
-		<button type="submit" class="chora-btn chora-btn-primary" disabled={disabled || sending || !text.trim()}>
-			{sending ? 'Sending…' : submitLabel}
-		</button>
-	</div>
+	<button
+		type="submit"
+		class="chora-btn chora-btn-primary composer-send"
+		disabled={disabled || sending || !text.trim()}
+	>
+		{sending ? '…' : submitLabel}
+	</button>
 </form>
 
 <style>
 	.composer {
-		margin-top: 1.5rem;
+		display: flex;
+		align-items: flex-end;
+		gap: 0.5rem;
+		margin: 0;
+		padding: 0.55rem 0.65rem;
+		border: 1px solid var(--chora-border);
+		border-radius: calc(var(--chora-radius) + 2px);
+		background: var(--chora-surface);
 	}
 
-	.actions {
-		margin-top: 0.5rem;
-		display: flex;
-		justify-content: flex-end;
+	.composer-input {
+		flex: 1;
+		min-width: 0;
+		min-height: 2.25rem;
+		max-height: 6rem;
+		padding: 0.45rem 0.5rem;
+		border: none;
+		border-radius: var(--chora-radius);
+		background: transparent;
+		font-family: var(--chora-font);
+		font-size: 0.95rem;
+		line-height: 1.45;
+		resize: none;
+	}
+
+	.composer-input:focus {
+		outline: none;
+	}
+
+	.composer-send {
+		flex-shrink: 0;
+		padding: 0.4rem 0.75rem;
+		font-size: 0.8rem;
 	}
 
 	.sr-only {

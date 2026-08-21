@@ -28,11 +28,10 @@
 	}
 </script>
 
-<div class="epoch-line" role="status" aria-live="polite">
-	<span class="epoch-label">Epoch</span>
-	<span class="epoch-id">{epochId}</span>
+<div class="epoch-chip" role="status" aria-live="polite">
+	<span>Epoch {epochId}</span>
 	<span class="divider">·</span>
-	<span class="phase">{phaseLabels[phase]}</span>
+	<span>{phaseLabels[phase]}</span>
 	{#if phase === 'converse'}
 		<span class="divider">·</span>
 		<span class="countdown">{formatCountdown(countdownSeconds)}</span>
@@ -40,33 +39,22 @@
 </div>
 
 <style>
-	.epoch-line {
-		display: flex;
+	.epoch-chip {
+		display: inline-flex;
 		align-items: center;
-		gap: 0.5rem;
-		padding: 0.35rem 1.25rem;
+		gap: 0.35rem;
+		padding: 0.25rem 0.6rem;
+		border: 1px solid var(--chora-border);
+		border-radius: 999px;
 		font-family: var(--chora-font-ui);
-		font-size: 0.75rem;
+		font-size: 0.65rem;
 		color: var(--chora-text-muted);
-		background: var(--chora-surface);
-		border-bottom: 1px solid var(--chora-border);
-	}
-
-	.epoch-label {
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-	}
-
-	.epoch-id {
-		font-variant-numeric: tabular-nums;
+		background: color-mix(in srgb, var(--chora-surface) 70%, transparent);
+		white-space: nowrap;
 	}
 
 	.divider {
-		opacity: 0.5;
-	}
-
-	.phase {
-		color: var(--chora-text);
+		opacity: 0.45;
 	}
 
 	.countdown {

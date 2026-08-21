@@ -1,59 +1,35 @@
 <script lang="ts">
 	import type { ThreadMessage, ThreadSummary } from '../lib/types';
 	import ThreadMessageView from './ThreadMessage.svelte';
-	import MessageComposer from './MessageComposer.svelte';
-	import LoginPrompt from './LoginPrompt.svelte';
 
 	let {
 		thread,
 		messages = [],
-		needsAuth = false,
 		onback,
-		onreply,
-		onlogin,
 		monadAuthor = '',
 		awaitingMonad = false,
 		onopeninputs,
 	}: {
 		thread: ThreadSummary | null;
 		messages?: ThreadMessage[];
-		needsAuth?: boolean;
 		onback?: () => void;
-		onreply?: (body: string) => void | Promise<void>;
-		onlogin?: () => void | Promise<void>;
 		monadAuthor?: string;
 		awaitingMonad?: boolean;
 		onopeninputs?: (messageId: string) => void;
 	} = $props();
-
-	let replyPrompt = $state(false);
-
-	async function handleReply(body: string) {
-		if (needsAuth) {
-			replyPrompt = true;
-			return;
-		}
-		replyPrompt = false;
-		await onreply?.(body);
-	}
 </script>
 
 <section class="thread-view" aria-label="Conversation thread">
 	{#if thread}
 		<header class="thread-header">
-			<button type="button" class="chora-btn chora-btn-ghost back" onclick={() => onback?.()}>
-				← Back
-			</button>
-			<div>
-				<h1>{thread.title}</h1>
-				<p class="chora-muted meta">
-					{thread.visibility === 'private' ? 'Private — you and the Monad' : 'Public — citizens and the Monad'}
-					· {thread.participant_count} participants
-				</p>
-			</div>
+			<button type="button" class="back-link" onclick={() => onback?.()}>← Back</button>
+			<p class="thread-title">{thread.title}</p>
+			<p class="chora-muted meta">
+				{thread.visibility === 'private' ? 'Private' : 'Public'} · {thread.participant_count} participants
+			</p>
 		</header>
 
-		<div class="messages chora-prose">
+		<div class="messages">
 			{#each messages as message (message.id)}
 				<ThreadMessageView
 					message={message}
@@ -67,50 +43,60 @@
 				The Monad is considering…
 			</p>
 		{/if}
-
-		<MessageComposer
-			placeholder="Continue the conversation…"
-			fieldId="chora-thread-composer"
-			onsubmit={handleReply}
-		/>
-		{#if replyPrompt}
-			<LoginPrompt message="Sign in to reply." onlogin={onlogin} />
-		{/if}
 	{:else}
-		<button type="button" class="chora-btn chora-btn-ghost back" onclick={() => onback?.()}>
-			← Back
-		</button>
+		<button type="button" class="back-link" onclick={() => onback?.()}>← Back</button>
 		<p class="chora-muted">Thread not found.</p>
 	{/if}
 </section>
 
 <style>
+	.thread-view {
+		display: flex;
+		flex-direction: column;
+		gap: 0.65rem;
+	}
+
 	.thread-header {
-		margin-bottom: 1.5rem;
+		margin-bottom: 0.25rem;
 	}
 
-	.back {
-		margin-bottom: 0.75rem;
+	.back-link {
+		border: none;
+		background: transparent;
+		padding: 0;
+		margin-bottom: 0.35rem;
+		font-family: var(--chora-font-ui);
+		font-size: 0.75rem;
+		color: var(--chora-text-muted);
+		text-decoration: underline;
+		text-underline-offset: 0.15em;
 	}
 
-	h1 {
+	.back-link:hover {
+		color: var(--chora-text);
+	}
+
+	.thread-title {
 		margin: 0;
-		font-size: 1.35rem;
+		font-size: 1rem;
 		font-weight: 500;
 	}
 
 	.meta {
-		margin: 0.25rem 0 0;
-		font-size: 0.875rem;
+		margin: 0.2rem 0 0;
+		font-size: 0.75rem;
 	}
 
 	.messages {
-		margin-top: 1rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.65rem;
 	}
 
 	.considering {
-		margin: 0.75rem 0 0;
+		margin: 0;
 		font-family: var(--chora-font-ui);
 		font-style: italic;
+		font-size: 0.85rem;
 	}
 </style>

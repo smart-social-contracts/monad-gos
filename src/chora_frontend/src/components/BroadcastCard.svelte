@@ -35,7 +35,7 @@
 	}
 </script>
 
-<article class="broadcast-card">
+<article class="bubble">
 	<header>
 		<span class="kind">Monad</span>
 		<time class="chora-muted" datetime={new Date(message.created_at * 1000).toISOString()}>
@@ -44,9 +44,7 @@
 	</header>
 	<p class="body">{message.body}</p>
 	<footer>
-		<button type="button" class="chora-btn" onclick={handleReply}>
-			Reply — opens a thread
-		</button>
+		<button type="button" class="reply-link" onclick={handleReply}>Reply</button>
 		{#if replyPrompt}
 			<LoginPrompt message="Sign in to reply." onlogin={onlogin} />
 		{/if}
@@ -54,23 +52,22 @@
 </article>
 
 <style>
-	.broadcast-card {
-		padding: 1.5rem 0;
-		border-bottom: 1px solid var(--chora-border);
-	}
-
-	.broadcast-card:last-child {
-		border-bottom: none;
+	.bubble {
+		align-self: flex-start;
+		max-width: 100%;
+		padding: 0.75rem 0.9rem;
+		border-radius: calc(var(--chora-radius) + 4px);
+		background: var(--chora-surface);
 	}
 
 	header {
 		display: flex;
 		justify-content: space-between;
 		align-items: baseline;
-		gap: 1rem;
-		margin-bottom: 0.75rem;
+		gap: 0.75rem;
+		margin-bottom: 0.4rem;
 		font-family: var(--chora-font-ui);
-		font-size: 0.8rem;
+		font-size: 0.7rem;
 	}
 
 	.kind {
@@ -80,10 +77,26 @@
 
 	.body {
 		margin: 0;
-		font-size: 1.05rem;
+		font-size: 1rem;
+		line-height: 1.55;
 	}
 
 	footer {
-		margin-top: 1rem;
+		margin-top: 0.5rem;
+	}
+
+	.reply-link {
+		border: none;
+		background: transparent;
+		padding: 0;
+		font-family: var(--chora-font-ui);
+		font-size: 0.75rem;
+		color: var(--chora-text-muted);
+		text-decoration: underline;
+		text-underline-offset: 0.15em;
+	}
+
+	.reply-link:hover {
+		color: var(--chora-text);
 	}
 </style>

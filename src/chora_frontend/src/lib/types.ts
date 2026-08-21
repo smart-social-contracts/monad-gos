@@ -142,3 +142,39 @@ export interface ProposalView {
 	thread_ids: string[];
 	voting_deadline?: string;
 }
+
+export interface SetupPersonality {
+	voice: string;
+	stance: string;
+	principles: string[];
+	description: string;
+}
+
+export interface SetupToken {
+	mode: string;
+	token_id: string;
+	symbol: string;
+	canister_id: string;
+}
+
+export interface SetupDraft {
+	step: string;
+	personality: SetupPersonality;
+	token: SetupToken;
+	logo_data_url: string;
+}
+
+export interface SetupState {
+	entered: boolean;
+	completed: boolean;
+	is_caller_authorized: boolean;
+	creator: string;
+	registry_canister_id: string;
+	completed_at: number;
+	draft: SetupDraft;
+	personality: SetupPersonality;
+	token: SetupToken;
+	logo_data_url: string;
+}
+
+export type SetupStep = 'welcome' | 'personality' | 'token' | 'branding' | 'launch';
