@@ -67,7 +67,7 @@ def run(*, dry_run: bool = False) -> int:
             "code_checksum": "",
             "voting_deadline": None,
             "required_threshold": None,
-            "org_scope": "chora",
+            "org_scope": "monad-gos",
             "metadata": json.dumps(
                 {
                     "motivating_wish_hashes": proposal["motivating_wish_hashes"],
@@ -86,7 +86,7 @@ def run(*, dry_run: bool = False) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Chora Monad off-chain service")
+    parser = argparse.ArgumentParser(description="Monad GOS Monad off-chain service")
     parser.add_argument(
         "--dry-run",
         action="store_true",

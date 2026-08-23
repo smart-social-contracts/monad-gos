@@ -1,6 +1,6 @@
 # 08 — Implementation: stack & architecture
 
-Chora is a **slim Motoko backend** implementing the GGG spec, a Svelte 5
+Monad GOS is a **slim Motoko backend** implementing the GGG spec, a Svelte 5
 frontend, and an off-chain Monad service. The platform (gos-as-a-service)
 dictates the packaging; the language choices are deliberate.
 
@@ -18,7 +18,7 @@ Two independent implementations honor that spec and interoperate over the wire:
 | Implementation | Language | Repo |
 |---|---|---|
 | Realms GOS | Python (Kybra/Basilisk) | `smart-social-contracts/realms` |
-| Chora GOS | **Motoko** | `smart-social-contracts/chora-gos` |
+| Monad GOS | **Motoko** | `smart-social-contracts/monad-gos` |
 
 **Why Motoko, and why slim.** Two reasons, both strategic:
 
@@ -27,7 +27,7 @@ Two independent implementations honor that spec and interoperate over the wire:
    *standard* rather than a Python library — usable by others in the ecosystem.
 2. **It proves gos-as-a-service is language-agnostic.** The platform's pitch is
    implementation-agnosticism, but every GOS so far is Python. A Motoko
-   `chora-gos` interoperating with Python `realms-gos` over Candid makes that
+   `monad-gos` interoperating with Python `realms-gos` over Candid makes that
    claim concrete.
 
 This **supersedes** the earlier "reuse Realms GGG as a Python library" decision
@@ -40,7 +40,7 @@ implementations interoperate; get it wrong and there are two incompatible
 ## Backend: Motoko, as slim as possible
 
 The Agora + GGG core is a **Motoko canister** implementing the GGG spec. Slim is
-a goal, not an afterthought — Chora carries only what the design needs:
+a goal, not an afterthought — Monad GOS carries only what the design needs:
 
 - **GGG entities** — the Motoko implementation of the spec's entity set.
 - **The `Wish` entity + Agora write path** — append vetKey-encrypted wishes,
@@ -59,7 +59,7 @@ a goal, not an afterthought — Chora carries only what the design needs:
 ## Frontend: Svelte 5, lib-mode bundle
 
 A **Svelte 5** frontend built as a lib-mode ESM bundle, packaged as
-`chora_frontend.tar.gz`, embedded via the `chora-iframe-v1` loader profile in
+`monad_frontend.tar.gz`, embedded via the `monad-iframe-v1` loader profile in
 the gos.earth portal. One Internet Identity principal across realms; the portal
 is the only login origin.
 
@@ -67,14 +67,14 @@ The UI is the conversational model from 06: Monad broadcast on top, threads
 branching off, a separate minimal voting area, the single alignment-coefficient
 number, a thin epoch status line.
 
-## The citizen edge: Chora MCP server (no local LLM)
+## The citizen edge: Monad MCP server (no local LLM)
 
-Chora does **not** ship a local LLM. Citizens plug their own assistant (Claude,
-ChatGPT, …) into **`chora-mcp`** — Chora's Streamable-HTTP MCP server (default
-local `:5002`; public URL planned `https://chora-mcp.realmsgos.dev/mcp`). Auth
-uses Chora pairing tokens (`chmcp_…`) with scopes `read` / `full`.
+Monad GOS does **not** ship a local LLM. Citizens plug their own assistant (Claude,
+ChatGPT, …) into **`monad-mcp`** — Monad GOS's Streamable-HTTP MCP server (default
+local `:5002`; public URL planned `https://monad-mcp.realmsgos.dev/mcp`). Auth
+uses Monad GOS pairing tokens (`mgosmcp_…`) with scopes `read` / `full`.
 
-The **open work** on Chora MCP is **delegated signing**: on-chain writes
+The **open work** on Monad MCP is **delegated signing**: on-chain writes
 (submit wish, cast vote) need an II session delegation, not just a pairing
 token.
 
@@ -100,44 +100,44 @@ HSM/KMS integration works.
 
 ## Toolchain: `icp`, not `dfx`
 
-Realms still has `dfx.json` and no `icp.yaml`. Chora is greenfield — **start on
+Realms still has `dfx.json` and no `icp.yaml`. Monad GOS is greenfield — **start on
 `icp.yaml` directly** and do not inherit the deprecated toolchain. The one place
-Chora can be cleaner than Realms from day one.
+Monad GOS can be cleaner than Realms from day one.
 
 ## Repository shape
 
 ```
-chora/
+monad-gos/
 ├── icp.yaml                      # icp toolchain, not dfx
 ├── src/
-│   ├── chora_backend/            # Motoko canister (slim)
+│   ├── monad_backend/            # Motoko canister (slim)
 │   │   ├── ggg/                  # Motoko impl of the GGG spec
 │   │   ├── agora/                # Wish entity, epoch seal, write path
 │   │   ├── grammar/              # proposal validation (the novel piece)
 │   │   ├── alignment/            # membership-due / coefficient accounting
 │   │   └── codex/codex.mo        # Monad-authored public law (treasury, budgets)
-│   └── chora_frontend/           # Svelte 5 lib-mode bundle
+│   └── monad_frontend/           # Svelte 5 lib-mode bundle
 │       └── src/                  # broadcast, threads, voting, coefficient
 ├── monad/                        # off-chain service
 │   ├── engine/                   # swappable LLM interface (proposer/critic/judge)
 │   ├── keys/                     # vetKey + signing (HSM/KMS)
 │   └── pipeline/                 # read sealed epoch → deliberate → emit
-├── mcp_server/                   # Chora MCP server (chora-mcp, Streamable HTTP)
-├── mcp_tools/                    # tool pack for chora-mcp
+├── mcp_server/                   # Monad MCP server (monad-mcp, Streamable HTTP)
+├── mcp_tools/                    # tool pack for monad-mcp
 │   ├── submit_wish.*             # citizen wish submission (needs delegated signing)
 │   ├── read_broadcast.*          # Monad broadcast + threads
 │   └── alignment.*               # alignment-coefficient read
 └── docs/                         # the spec files (00–08)
 ```
 
-Build artifacts for GaaS: `chora_backend.wasm.gz` + `chora_frontend.tar.gz`,
-registered as `chora-gos` with loader profile `chora-iframe-v1` (see 04).
+Build artifacts for GaaS: `monad_backend.wasm.gz` + `monad_frontend.tar.gz`,
+registered as `monad-gos` with loader profile `monad-iframe-v1` (see 04).
 
 ## Dependency on the `ggg` repo
 
-Chora's backend is written **against the `ggg` spec repo**. That repo is the
+Monad GOS's backend is written **against the `ggg` spec repo**. That repo is the
 single source of truth for the Candid interface and schema. Realms' Python GGG
-stays in the Realms repo; Chora's Motoko GGG stays in the Chora repo; the spec
+stays in the Realms repo; Monad GOS's Motoko GGG stays in the Monad GOS repo; the spec
 is what they share.
 
 ### v0.1 backend ↔ spec divergences (to reconcile)

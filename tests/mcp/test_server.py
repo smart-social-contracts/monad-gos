@@ -13,19 +13,20 @@ def test_healthz_service():
     import json
 
     data = json.loads(body)
-    assert data["service"] == "chora-mcp"
+    assert data["service"] == "monad-mcp"
     assert data["auth"] == "pairing-token"
+    assert "tool_count" in data
     assert "chora_tool_count" not in data
     assert "geister" not in body.lower()
 
 
 def test_tool_names_include_cast_vote():
-    from chora_tools import CHORA_TOOLS, CHORA_WRITE_TOOLS
+    from monad_gos_tools import MONAD_GOS_TOOLS, MONAD_GOS_WRITE_TOOLS
 
-    names = {t["function"]["name"] for t in CHORA_TOOLS}
+    names = {t["function"]["name"] for t in MONAD_GOS_TOOLS}
     assert "cast_vote" in names
     assert "chora_cast_vote" not in names
-    assert "cast_vote" in CHORA_WRITE_TOOLS
+    assert "cast_vote" in MONAD_GOS_WRITE_TOOLS
 
 
 def test_geister_not_imported():

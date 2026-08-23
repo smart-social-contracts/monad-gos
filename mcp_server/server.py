@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-Chora MCP server (Streamable HTTP).
+Monad MCP server (Streamable HTTP).
 
-Exposes Chora citizen tools to MCP clients such as Claude. Every tool call is
+Exposes Monad GOS citizen tools to MCP clients such as Claude. Every tool call is
 scoped to the IC principal the bearer pairing token authenticates as.
 
 Run:
-    CHORA_MCP_PORT=5002 python3 -m mcp_server.server
+    MONAD_MCP_PORT=5002 python3 -m mcp_server.server
 
 Transport: Streamable HTTP at /mcp (stateless). Health at /healthz.
-Public URL (documentation only): https://chora-mcp.realmsgos.dev
+Public URL (documentation only): https://monad-mcp.realmsgos.dev
 """
 from __future__ import annotations
 
@@ -21,9 +21,9 @@ import sys
 from contextvars import ContextVar
 from typing import Optional
 
-_CHORA_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-_MCP_TOOLS = os.path.join(_CHORA_ROOT, "mcp_tools")
-for _path in (_CHORA_ROOT, _MCP_TOOLS):
+_MONAD_GOS_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+_MCP_TOOLS = os.path.join(_MONAD_GOS_ROOT, "mcp_tools")
+for _path in (_MONAD_GOS_ROOT, _MCP_TOOLS):
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
@@ -37,7 +37,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, PlainTextResponse
 from starlette.routing import Mount, Route
 
-from chora_client import get_client
+from monad_gos_client import get_client
 
 import mcp.types as types
 from mcp.server.auth.middleware.auth_context import AuthContextMiddleware
@@ -46,30 +46,30 @@ from mcp.server.auth.provider import AccessToken, TokenVerifier
 from mcp.server.lowlevel import Server
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
-from chora_tools import (
-    CHORA_TOOLS,
-    CHORA_TOOL_NAMES,
-    CHORA_WRITE_TOOLS,
-    execute_chora_tool,
+from monad_gos_tools import (
+    MONAD_GOS_TOOLS,
+    MONAD_GOS_TOOL_NAMES,
+    MONAD_GOS_WRITE_TOOLS,
+    execute_monad_gos_tool,
 )
 from mcp_server import tokens
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("chora-mcp")
+logger = logging.getLogger("monad-mcp")
 
-MCP_PORT = int(os.getenv("CHORA_MCP_PORT", "5002"))
-MCP_HOST = os.getenv("CHORA_MCP_HOST", "127.0.0.1")
-DEFAULT_NETWORK = os.getenv("CHORA_MCP_NETWORK", "ic")
-DEFAULT_CHORA_CANISTER = os.getenv(
-    "CHORA_CANISTER_ID", "sea3h-pyaaa-aaaab-qhewq-cai"
+MCP_PORT = int(os.getenv("MONAD_MCP_PORT", "5002"))
+MCP_HOST = os.getenv("MONAD_MCP_HOST", "127.0.0.1")
+DEFAULT_NETWORK = os.getenv("MONAD_MCP_NETWORK", "ic")
+DEFAULT_MONAD_GOS_CANISTER = os.getenv(
+    "MONAD_GOS_CANISTER_ID", "sea3h-pyaaa-aaaab-qhewq-cai"
 ).strip()
-MAX_RESULT_CHARS = int(os.getenv("CHORA_MCP_MAX_RESULT_CHARS", "24000"))
+MAX_RESULT_CHARS = int(os.getenv("MONAD_MCP_MAX_RESULT_CHARS", "24000"))
 PUBLIC_URL = os.getenv(
-    "CHORA_MCP_PUBLIC_URL", "https://chora-mcp.realmsgos.dev"
+    "MONAD_MCP_PUBLIC_URL", "https://monad-mcp.realmsgos.dev"
 ).rstrip("/")
 
-WRITE_TOOLS = set(CHORA_WRITE_TOOLS)
-ALL_TOOLS = CHORA_TOOLS
+WRITE_TOOLS = set(MONAD_GOS_WRITE_TOOLS)
+ALL_TOOLS = MONAD_GOS_TOOLS
 
 _CURRENT: ContextVar[Optional[dict]] = ContextVar("mcp_principal", default=None)
 IDENTITY_INJECTED = {"author_principal"}
@@ -125,16 +125,16 @@ def _tools_for_scope(scope: str) -> list[types.Tool]:
     return tools
 
 
-class ChoraAccessToken(AccessToken):
+class Monad GOSAccessToken(AccessToken):
     user_principal: str = ""
 
 
 class PairingTokenVerifier(TokenVerifier):
-    async def verify_token(self, token: str) -> Optional[ChoraAccessToken]:
+    async def verify_token(self, token: str) -> Optional[Monad GOSAccessToken]:
         info = await anyio.to_thread.run_sync(tokens.validate_token, token)
         if info is None:
             return None
-        return ChoraAccessToken(
+        return Monad GOSAccessToken(
             token=token,
             client_id="pairing-token",
             scopes=_effective_scopes(info["scope"]),
@@ -144,7 +144,7 @@ class PairingTokenVerifier(TokenVerifier):
 
 
 token_verifier = PairingTokenVerifier()
-server: Server = Server("chora-mcp")
+server: Server = Server("monad-mcp")
 
 
 @server.list_tools()
@@ -204,24 +204,24 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.ContentBloc
     if "author_principal" in props and not args.get("author_principal"):
         args["author_principal"] = principal
 
-    chora_id = (
-        args.pop("chora_canister_id", "")
+    monad_gos_id = (
+        args.pop("monad_gos_canister_id", "")
         or args.pop("realm_id", "")
-        or DEFAULT_CHORA_CANISTER
+        or DEFAULT_MONAD_GOS_CANISTER
     )
 
     def _run() -> str:
-        return execute_chora_tool(
+        return execute_monad_gos_tool(
             name,
             args,
             network=DEFAULT_NETWORK,
-            chora_canister_id=chora_id,
+            monad_gos_canister_id=monad_gos_id,
             user_principal=principal,
             user_identity="",
         )
 
     try:
-        if name in CHORA_TOOL_NAMES:
+        if name in MONAD_GOS_TOOL_NAMES:
             result = await anyio.to_thread.run_sync(_run)
         else:
             result = json.dumps({"error": f"unknown tool '{name}'"})
@@ -270,18 +270,18 @@ class PrincipalContextMiddleware:
 async def healthz(_request: Request):
     return JSONResponse({
         "status": "ok",
-        "service": "chora-mcp",
+        "service": "monad-mcp",
         "network": DEFAULT_NETWORK,
         "tool_count": len(ALL_TOOLS),
-        "canister": DEFAULT_CHORA_CANISTER or None,
+        "canister": DEFAULT_MONAD_GOS_CANISTER or None,
         "auth": "pairing-token",
     })
 
 
 async def root(_request: Request):
     return PlainTextResponse(
-        "Chora MCP server. Connect an MCP client to /mcp with "
-        "Authorization: Bearer <chmcp_... pairing token>."
+        "Monad MCP server. Connect an MCP client to /mcp with "
+        "Authorization: Bearer <mgosmcp_... pairing token>."
     )
 
 
@@ -298,7 +298,7 @@ async def _principal_from_pairing_code(code: str | None) -> str:
 
 async def api_settings(_request: Request):
     return JSONResponse({
-        "service": "chora-mcp",
+        "service": "monad-mcp",
         "mcp_url": f"{PUBLIC_URL}/mcp",
         "public_url": PUBLIC_URL,
     })
@@ -372,7 +372,7 @@ async def lifespan(_app):
         logger.warning("could not ensure token schema at startup: %s", e)
     async with session_manager.run():
         _log(
-            f"[chora-mcp] listening on {MCP_HOST}:{MCP_PORT} "
+            f"[monad-mcp] listening on {MCP_HOST}:{MCP_PORT} "
             f"(network={DEFAULT_NETWORK}, public_url={PUBLIC_URL})"
         )
         yield
