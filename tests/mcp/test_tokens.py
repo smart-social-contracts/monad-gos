@@ -21,7 +21,7 @@ def test_mint_validate_revoke(token_db):
         scope="full",
         db_path=token_db,
     )
-    assert row["token"].startswith("chmcp_")
+    assert row["token"].startswith("mgosmcp_")
     assert row["principal"] == "aaaaa-aa"
 
     info = tokens.validate_token(row["token"], db_path=token_db)

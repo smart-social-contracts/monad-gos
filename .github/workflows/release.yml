@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: src/chora_frontend/package-lock.json
+          cache-dependency-path: src/monad_frontend/package-lock.json
 
       - name: Install icp-cli and Motoko toolchain
         run: |
@@ -34,10 +34,10 @@ jobs:
 
       - name: Stage release assets
         run: |
-          cp artifacts/chora_backend.wasm.gz ./chora_backend.wasm.gz
-          cp artifacts/chora_frontend.tar.gz ./chora_frontend.tar.gz
+          cp artifacts/monad_backend.wasm.gz ./monad_backend.wasm.gz
+          cp artifacts/monad_frontend.tar.gz ./monad_frontend.tar.gz
           echo "# SHA-256 checksums for release assets" > checksums.txt
-          for f in chora_backend.wasm.gz chora_backend.did chora_frontend.tar.gz; do
+          for f in monad_backend.wasm.gz monad_backend.did monad_frontend.tar.gz; do
             sha256sum "$f" >> checksums.txt
           done
           cat checksums.txt
@@ -49,7 +49,7 @@ jobs:
           name: Release ${{ github.ref_name }}
           generate_release_notes: true
           files: |
-            chora_backend.wasm.gz
-            chora_backend.did
-            chora_frontend.tar.gz
+            monad_backend.wasm.gz
+            monad_backend.did
+            monad_frontend.tar.gz
             checksums.txt

@@ -19,8 +19,8 @@ INACTIVITY_TIMEOUT_SECONDS = int(os.getenv("INACTIVITY_TIMEOUT_SECONDS", "3600")
 INACTIVITY_CHECK_INTERVAL_SECONDS = int(os.getenv("INACTIVITY_CHECK_INTERVAL_SECONDS", "60"))
 OLLAMA_READY_TIMEOUT_SECONDS = int(os.getenv("OLLAMA_READY_TIMEOUT_SECONDS", "300"))
 
-DEFAULT_ACTIVITY_FILE = Path("/tmp/chora-monad-last-activity")
-DEFAULT_REPLY_LOOP_PID_FILE = Path("/tmp/chora-monad-reply-loop.pid")
+DEFAULT_ACTIVITY_FILE = Path("/tmp/monad-gos-executive-last-activity")
+DEFAULT_REPLY_LOOP_PID_FILE = Path("/tmp/monad-gos-executive-reply-loop.pid")
 
 _process_start = time.time()
 _ensure_ollama_lock = threading.Lock()

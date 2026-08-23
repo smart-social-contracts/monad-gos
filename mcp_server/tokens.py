@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Pairing tokens for the Chora MCP server.
+Pairing tokens for the Monad MCP server.
 
-Stores only SHA-256 hashes in SQLite. Plaintext tokens use the ``chmcp_`` prefix
+Stores only SHA-256 hashes in SQLite. Plaintext tokens use the ``mgosmcp_`` prefix
 and are shown once at mint time.
 """
 from __future__ import annotations
@@ -18,13 +18,13 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
-TOKEN_PREFIX = "chmcp_"
+TOKEN_PREFIX = "mgosmcp_"
 VALID_SCOPES = ("read", "full")
 
 
 def _default_db_path() -> str:
     return os.path.expanduser(
-        os.getenv("CHORA_MCP_TOKEN_DB", "~/.chora/mcp-tokens.sqlite")
+        os.getenv("MONAD_MCP_TOKEN_DB", "~/.monad-gos/mcp-tokens.sqlite")
     )
 
 
@@ -263,7 +263,7 @@ def revoke_token(token_or_prefix: str, db_path: Optional[str] = None) -> bool:
 
 
 def _cli(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Chora MCP pairing tokens")
+    parser = argparse.ArgumentParser(description="Monad MCP pairing tokens")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_mint = sub.add_parser("mint", help="Mint a new pairing token")

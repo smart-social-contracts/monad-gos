@@ -5,12 +5,12 @@ grammar cannot reach — so each one names its trust explicitly.
 
 ## 1. The gos.earth platform (GaaS)
 
-The one interface that already exists. Chora registers as a known GOS
+The one interface that already exists. Monad GOS registers as a known GOS
 implementation alongside `realms-gos`.
 
 Decided: **implement the GGG spec in Motoko**, as a slim, minimal backend. GGG
 is a language-neutral standard in its own repo (`smart-social-contracts/ggg`,
-spec-only: Candid interface, data schema, entity semantics). Chora (Motoko) and
+spec-only: Candid interface, data schema, entity semantics). Monad GOS (Motoko) and
 Realms (Python) are two independent implementations that interoperate because
 both honor the same Candid schema.
 
@@ -19,23 +19,23 @@ reimplementation is the point: it contributes a working Motoko GGG to the
 ecosystem and proves gos-as-a-service runs interoperable backend canisters in
 different languages.
 
-GaaS fetches Chora from public GitHub releases on
-`smart-social-contracts/chora-gos`:
+GaaS fetches Monad GOS from public GitHub releases on
+`smart-social-contracts/monad-gos`:
 
 | Field | Value |
 |---|---|
-| `id` | `chora-gos` |
-| `label` | `Chora GOS` |
+| `id` | `monad-gos` |
+| `label` | `Monad GOS` |
 | `default_version` | `v0.1.0` |
-| `release_repo` | `smart-social-contracts/chora-gos` |
-| `artifacts.backend_wasm_key` | `chora-backend` |
-| `artifacts.frontend_wasm_key` | `chora-assets` |
-| `artifacts.backend_asset` | `chora_backend.wasm.gz` |
-| `artifacts.frontend_asset` | `chora_frontend.tar.gz` |
-| `loader_profile` | `chora-iframe-v1` |
+| `release_repo` | `smart-social-contracts/monad-gos` |
+| `artifacts.backend_wasm_key` | `monad-backend` |
+| `artifacts.frontend_wasm_key` | `monad-assets` |
+| `artifacts.backend_asset` | `monad_backend.wasm.gz` |
+| `artifacts.frontend_asset` | `monad_frontend.tar.gz` |
+| `loader_profile` | `monad-iframe-v1` |
 | `available` | `true` |
 
-Chora declares **no codex/extension catalog** (unlike `realms-gos`), so GaaS
+Monad GOS declares **no codex/extension catalog** (unlike `realms-gos`), so GaaS
 skips catalog seeding for it.
 
 ## 2. The Monad key (the off-chain interface)
@@ -66,8 +66,8 @@ character of the system.)
 
 ## 3. Federation (other realms / Monads)
 
-GGG provides `FederationMessage`. See 03 §4. Chora↔Realms shares the GGG
-vocabulary; Chora↔Chora lets Monads exchange outcomes. All federation traffic is
+GGG provides `FederationMessage`. See 03 §4. Monad GOS↔Realms shares the GGG
+vocabulary; Monad GOS ↔ Monad GOS lets Monads exchange outcomes. All federation traffic is
 on the public record.
 
 ## 4. External world (oracles & bridges)
@@ -90,17 +90,17 @@ is high" but "**source S reported value V at time T**," so a voter — or the
 critic model — can check it. With open oracles, the critic's job expands from
 policy-checking to **fact-checking**.
 
-## 5. The citizen's assistant (Chora MCP server)
+## 5. The citizen's assistant (Monad MCP server)
 
-Chora does **not** ship a local LLM. It **does** operate its own MCP server —
-**`chora-mcp`** (Streamable HTTP; default local `:5002`; public URL planned
-`https://chora-mcp.realmsgos.dev/mcp`). Any MCP-compatible assistant (Claude,
-ChatGPT, …) plugs into Chora MCP to drive the realm on the citizen's behalf.
-Chora does **not** use `geister-mcp.realmsgos.dev`.
+Monad GOS does **not** ship a local LLM. It **does** operate its own MCP server —
+**`monad-mcp`** (Streamable HTTP; default local `:5002`; public URL planned
+`https://monad-mcp.realmsgos.dev/mcp`). Any MCP-compatible assistant (Claude,
+ChatGPT, …) plugs into Monad MCP to drive the realm on the citizen's behalf.
+Monad GOS does **not** use `geister-mcp.realmsgos.dev`.
 
 - **No pinned model.** The front-door model is the citizen's *choice*, not a
-  component Chora imposes.
-- **Chora pairing tokens** (`chmcp_…`) authenticate MCP clients, with scopes
+  component Monad GOS imposes.
+- **Monad GOS pairing tokens** (`mgosmcp_…`) authenticate MCP clients, with scopes
   `read` / `full`, consent, and revocation.
 
 **Tools exposed:** `submit_wish`, `read_broadcast`, alignment-coefficient read,
@@ -108,7 +108,7 @@ thread interface, `cast_vote`, …
 
 **The one real gap: delegated signing.** On-chain *writes* that must be signed
 as the user (submitting a wish, casting a vote) need an **II session
-delegation**, not just a pairing token. Closing that gap is Chora MCP work.
+delegation**, not just a pairing token. Closing that gap is Monad MCP work.
 
 ## Interface trust summary
 
@@ -118,4 +118,4 @@ delegation**, not just a pairing token. Closing that gap is Chora MCP work.
 | Monad key | central operator | **no** | HSM/KMS attestation + kill switch |
 | Federation | public record | partial | on-record traffic |
 | Oracles | open | **no** | falsifiable claims + critic fact-check |
-| Citizen assistant (Chora MCP) | citizen-chosen assistant; Chora MCP server | **no** | Chora pairing tokens (`chmcp_…`); delegated-signing gap to close |
+| Citizen assistant (Monad MCP) | citizen-chosen assistant; Monad MCP server | **no** | Monad GOS pairing tokens (`mgosmcp_…`); delegated-signing gap to close |

@@ -1,1 +1,1 @@
-"""Chora MCP server — Streamable HTTP transport for Chora citizen tools."""
+"""Monad MCP server — Streamable HTTP transport for Monad GOS citizen tools."""

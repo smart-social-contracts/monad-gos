@@ -44,7 +44,7 @@ def load_keys() -> MonadKeys:
     """Load key configuration from ``MONAD_KEY_PATH``."""
     key_path = os.environ.get("MONAD_KEY_PATH")
     if not key_path:
-        default_pem = Path(__file__).resolve().parent / "chora-monad.pem"
+        default_pem = Path(__file__).resolve().parent / "monad-executive.pem"
         if default_pem.is_file():
             key_path = str(default_pem)
     if key_path:

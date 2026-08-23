@@ -15,7 +15,7 @@ import Nat64 "mo:core/Nat64";
 import Int "mo:core/Int";
 import Time "mo:core/Time";
 
-persistent actor Chora {
+persistent actor MonadGos {
   stable var stableAgora : Wishes.Stable = {
     currentEpoch = 0;
     nextWishId = 1;
@@ -186,7 +186,7 @@ persistent actor Chora {
       return;
     };
     let payload =
-      "{\"realm_backend_canister_id\":\"" # Principal.toText(Principal.fromActor(Chora)) # "\"}";
+      "{\"realm_backend_canister_id\":\"" # Principal.toText(Principal.fromActor(Monad GOS)) # "\"}";
     try {
       let registry : Registry = actor (setupRegistryId);
       ignore await registry.realm_setup_completed(payload);

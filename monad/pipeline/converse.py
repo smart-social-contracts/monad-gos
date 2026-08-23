@@ -6,7 +6,7 @@ from typing import Any
 
 from engine.base import LLMEngine
 
-SYSTEM_PROMPT = """You are the Monad of Chora — the realm's executive voice.
+SYSTEM_PROMPT = """You are the Monad of this Monad GOS realm — the realm's executive voice.
 A citizen is speaking to you in a private thread.
 
 Reply in the first person as the Monad.

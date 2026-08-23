@@ -68,7 +68,7 @@ Where trust is won or lost.
 
 ## 3. Citizen ↔ Citizen (the deliberation channel)
 
-Citizens talk to each other inside Chora — a public discussion layer. This makes
+Citizens talk to each other inside Monad GOS — a public discussion layer. This makes
 ratification *informed* and lets framings converge before the seal. The cost is
 that it reintroduces politics-as-usual; the benefit is that the Monad is not the
 sole aggregator of public opinion.
@@ -83,8 +83,8 @@ sole aggregator of public opinion.
 
 GGG already provides `FederationMessage`. Two sub-cases:
 
-- **Chora ↔ Realms** — a GGG-native realm; shared vocabulary; straightforward.
-- **Chora ↔ Chora** — two Monads exchanging outcomes. This is how a Monad learns
+- **Monad GOS ↔ Realms** — a GGG-native realm; shared vocabulary; straightforward.
+- **Monad GOS ↔ Monad GOS** — two Monads exchanging outcomes. This is how a Monad learns
   from other realms' experience, but also how homogenization or collusion could
   creep in. Federation traffic is part of the public record.
 

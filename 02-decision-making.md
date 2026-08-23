@@ -12,7 +12,7 @@ The Monad decrypts the sealed epoch and aggregates wishes into *concerns*, with
 counts, so that minorities are not flattened into the median.
 
 The compression is itself a political act: deciding which wishes count as "the
-same concern" shapes the outcome. Chora mitigates this upstream — the public
+same concern" shapes the outcome. Monad GOS mitigates this upstream — the public
 discussion layer lets citizens converge on shared framings *before* the seal —
 but the Monad's aggregation step is still a place bias can enter, and it is
 part of the public record so it can be audited.

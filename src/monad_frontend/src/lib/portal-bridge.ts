@@ -1,10 +1,10 @@
 /**
- * Federation portal iframe bridge (Chora frontend side).
+ * Federation portal iframe bridge (Monad GOS frontend side).
  */
 import { DelegationIdentity, DelegationChain, Ed25519KeyIdentity } from '@dfinity/identity';
 
 const BRIDGE_VERSION = '1';
-const PORTAL_SESSION_KEY = 'chora:portal-embed';
+const PORTAL_SESSION_KEY = 'monad-gos:portal-embed';
 let port: MessagePort | null = null;
 let portalConfig: {
 	slug?: string;

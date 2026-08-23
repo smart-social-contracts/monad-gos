@@ -1,0 +1,135 @@
+:root {
+	--monad-gos-bg: #f7f5f2;
+	--monad-gos-surface: #ffffff;
+	--monad-gos-text: #2c2a26;
+	--monad-gos-text-muted: #6b6560;
+	--monad-gos-border: #e8e4de;
+	--monad-gos-accent: #3d5a6c;
+	--monad-gos-accent-soft: #e8eef2;
+	--monad-gos-executive: #4a5568;
+	--monad-gos-yes: #2d6a4f;
+	--monad-gos-no: #9b4d4d;
+	--monad-gos-font: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+	--monad-gos-font-ui: system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--monad-gos-prose: 42rem;
+	--monad-gos-radius: 6px;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+	background: var(--monad-gos-bg);
+	color: var(--monad-gos-text);
+	font-family: var(--monad-gos-font);
+	font-size: 18px;
+	line-height: 1.65;
+	-webkit-font-smoothing: antialiased;
+}
+
+#monad-gos-root {
+	height: 100%;
+}
+
+button,
+input,
+textarea {
+	font-family: var(--monad-gos-font-ui);
+}
+
+button {
+	cursor: pointer;
+}
+
+a {
+	color: var(--monad-gos-accent);
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+.monad-gos-muted {
+	color: var(--monad-gos-text-muted);
+	font-size: 0.875rem;
+}
+
+.monad-gos-prose {
+	max-width: var(--monad-gos-prose);
+}
+
+.monad-gos-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.45rem 0.85rem;
+	border: 1px solid var(--monad-gos-border);
+	border-radius: var(--monad-gos-radius);
+	background: var(--monad-gos-surface);
+	color: var(--monad-gos-text);
+	font-size: 0.875rem;
+	transition: background 0.15s ease;
+}
+
+.monad-gos-btn:hover {
+	background: var(--monad-gos-accent-soft);
+}
+
+.monad-gos-btn-primary {
+	background: var(--monad-gos-accent);
+	border-color: var(--monad-gos-accent);
+	color: #fff;
+}
+
+.monad-gos-btn-primary:hover {
+	background: #2f4858;
+}
+
+.monad-gos-btn-ghost {
+	border-color: transparent;
+	background: transparent;
+}
+
+.monad-gos-btn-ghost:hover {
+	background: var(--monad-gos-accent-soft);
+}
+
+.monad-gos-btn-yes {
+	border-color: var(--monad-gos-yes);
+	color: var(--monad-gos-yes);
+}
+
+.monad-gos-btn-no {
+	border-color: var(--monad-gos-no);
+	color: var(--monad-gos-no);
+}
+
+.monad-gos-input,
+.monad-gos-textarea {
+	width: 100%;
+	padding: 0.65rem 0.75rem;
+	border: 1px solid var(--monad-gos-border);
+	border-radius: var(--monad-gos-radius);
+	background: var(--monad-gos-surface);
+	font-size: 1rem;
+	line-height: 1.5;
+}
+
+.monad-gos-textarea {
+	min-height: 5rem;
+	resize: vertical;
+}
+
+.monad-gos-input:focus,
+.monad-gos-textarea:focus {
+	outline: 2px solid var(--monad-gos-accent-soft);
+	border-color: var(--monad-gos-accent);
+}

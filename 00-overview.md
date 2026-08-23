@@ -2,15 +2,15 @@
 
 ## Thesis
 
-Chora is a Governance Operating System (GOS), compliant with the GGG standard
+Monad GOS is a Governance Operating System (GOS), compliant with the GGG standard
 (Generalized Global Governance). Its distinguishing feature: the executive and
 legislative drafting function is performed by an AI — the **Monad** — rather
 than by a human-written codex.
 
-Realms and Chora are two answers to the same question ("how does a community
+Realms and Monad GOS are two answers to the same question ("how does a community
 turn its will into executed policy?"):
 
-| | Realms | Chora |
+| | Realms | Monad GOS |
 |---|---|---|
 | Origin of legislation | Human-written Python codex | Monad-drafted, per epoch |
 | Source of rules | Law-as-code | Law-as-inference |
@@ -54,7 +54,7 @@ treasury. See 06.
 
 1. **GGG by spec.** GGG is a language-neutral standard living in its own repo
    (`smart-social-contracts/ggg`, spec-only: Candid interface, data schema,
-   entity semantics). Chora implements it in **Motoko**; Realms implements it in
+   entity semantics). Monad GOS implements it in **Motoko**; Realms implements it in
    Python. Conformance means honoring the shared spec, not sharing code.
 2. **The Monad proposes, humans dispose.** The Monad has no direct write path
    to GGG state. Every effect passes through a ratified `Proposal`.
@@ -72,13 +72,13 @@ treasury. See 06.
 
 ## GGG conformance
 
-Chora targets `ggg_conformance: "1.0"`. GGG is a **language-neutral standard**
+Monad GOS targets `ggg_conformance: "1.0"`. GGG is a **language-neutral standard**
 in `smart-social-contracts/ggg` (spec-only: the versioned Candid interface, the
-data schema, and the entity semantics). Chora is a **slim Motoko implementation**
+data schema, and the entity semantics). Monad GOS is a **slim Motoko implementation**
 of that spec; Realms is the Python implementation. The two interoperate over the
 wire because both honor the same Candid schema — not because they share code.
 
-This makes Chora the **second, independent implementation** that proves GGG is a
+This makes Monad GOS the **second, independent implementation** that proves GGG is a
 protocol, not a Realms internal — and proves gos-as-a-service can run backend
 canisters in different languages that interoperate.
 

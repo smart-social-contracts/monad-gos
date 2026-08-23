@@ -1,5 +1,5 @@
 #!/bin/bash
-# Reproducible RunPod + Ollama setup for Chora Monad (mirrors geister/pod_manager.py pattern).
+# Reproducible RunPod + Ollama setup for Monad GOS Monad (mirrors geister/pod_manager.py pattern).
 #
 # Usage:
 #   ./runpod/setup.sh create    # create pod, pull model, print MONAD_OLLAMA_URL

@@ -77,7 +77,7 @@ as a **deliberate, accepted concentration of power**, not an oversight.
 
 If the kill switch freezes the Monad and the seat falls vacant, there is **no
 caretaker procedure and no emergency succession.** A frozen Monad cannot
-nominate a successor — and Chora does not provide one. Instead, citizens
+nominate a successor — and Monad GOS does not provide one. Instead, citizens
 **migrate to another realm within the same physical zone** — a sibling quarter
 in the federation, or a neighboring realm on the same geographic `Zone` (H3
 cell). The frozen realm is abandoned; its people re-form elsewhere.
@@ -85,9 +85,9 @@ cell). The frozen realm is abandoned; its people re-form elsewhere.
 **What carries over: just the people.** The frozen realm's state and treasury
 stay locked. Land, balances, and history do not migrate — the citizens do.
 
-**Where they go is entirely their own business.** Chora builds no migration
+**Where they go is entirely their own business.** Monad GOS builds no migration
 path, no treasury-splitting rule, no destination registry. **GGG is opt-out by
-construction**: the freedom to exit is a platform primitive, not a feature Chora
+construction**: the freedom to exit is a platform primitive, not a feature Monad GOS
 adds. Citizens may join a healthy neighbor realm or found a fresh one — their
 choice, under their own power.
 

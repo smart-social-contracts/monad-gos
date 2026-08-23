@@ -7,7 +7,7 @@ import logging
 import time
 from typing import Any
 
-from backend.client import ChoraBackendClient
+from backend.client import MonadGosBackendClient
 from engine.base import LLMEngine
 from pipeline.converse import generate_reply_bundle
 
@@ -20,7 +20,7 @@ def _last_message(thread: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def reply_if_needed(
-    backend: ChoraBackendClient,
+    backend: MonadGosBackendClient,
     engine: LLMEngine,
     thread_id: str,
     *,
@@ -55,7 +55,7 @@ def reply_if_needed(
         in_flight.discard(thread_id)
 
 
-def tick(backend: ChoraBackendClient, engine: LLMEngine, in_flight: set[str]) -> int:
+def tick(backend: MonadGosBackendClient, engine: LLMEngine, in_flight: set[str]) -> int:
     replied = 0
     try:
         summaries = backend.list_threads()

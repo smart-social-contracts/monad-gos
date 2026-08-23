@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://github.com/dfinity/icp-cli/raw/refs/tags/v0.1.0/docs/schemas/icp-yaml-schema.json
 #
-# Chora GOS — icp-cli project (dfx is not used).
+# Monad GOS — icp-cli project (dfx is not used).
 
 networks:
   - name: local
@@ -9,14 +9,14 @@ networks:
       port: 8100
 
 canisters:
-  - name: chora_backend
+  - name: monad_backend
     recipe:
       type: "@dfinity/motoko@v4.1.0"
       configuration:
-        main: src/chora_backend/main.mo
-        candid: chora_backend.did
+        main: src/monad_backend/main.mo
+        candid: monad_backend.did
 
-  - name: chora_frontend
+  - name: monad_frontend
     recipe:
       type: "@dfinity/asset-canister@v2.2.0"
       configuration:

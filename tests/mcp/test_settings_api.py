@@ -17,7 +17,7 @@ def token_db(monkeypatch):
     with tempfile.TemporaryDirectory() as tmp:
         path = os.path.join(tmp, "tokens.sqlite")
         tokens.ensure_schema(path)
-        monkeypatch.setenv("CHORA_MCP_TOKEN_DB", path)
+        monkeypatch.setenv("MONAD_MCP_TOKEN_DB", path)
         yield path
 
 
@@ -57,7 +57,7 @@ def test_settings_payload(client):
     response = client.get("/api/settings")
     assert response.status_code == 200
     data = response.json()
-    assert data["service"] == "chora-mcp"
+    assert data["service"] == "monad-mcp"
     assert data["mcp_url"].endswith("/mcp")
     assert data["public_url"] == server.PUBLIC_URL
 
@@ -84,7 +84,7 @@ def test_mint_list_revoke(client, mock_principal):
     )
     assert mint.status_code == 201
     mint_data = mint.json()
-    assert mint_data["token"].startswith("chmcp_")
+    assert mint_data["token"].startswith("mgosmcp_")
     metadata = mint_data["metadata"]
     assert metadata["label"] == "claude"
     assert metadata["scope"] == "read"

@@ -2,11 +2,11 @@ import './styles/global.css';
 import { mount, unmount } from 'svelte';
 import App from './App.svelte';
 
-export interface ChoraMountOptions {
+export interface MonadGosMountOptions {
 	target: HTMLElement;
 }
 
-export function mountChora({ target }: ChoraMountOptions) {
+export function mountMonadGos({ target }: MonadGosMountOptions) {
 	const component = mount(App, { target });
 	return {
 		unmount() {
@@ -19,13 +19,13 @@ export function mountChora({ target }: ChoraMountOptions) {
 	};
 }
 
-export default mountChora;
+export default mountMonadGos;
 
 function autoMount() {
 	const target =
-		document.getElementById('chora-root') ?? document.getElementById('app');
+		document.getElementById('monad-gos-root') ?? document.getElementById('app');
 	if (target) {
-		mountChora({ target });
+		mountMonadGos({ target });
 	}
 }
 

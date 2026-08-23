@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
-# Package Chora backend wasm + frontend dist for GaaS deployment.
+# Package Monad GOS backend wasm + frontend dist for GaaS deployment.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="${ROOT}/artifacts"
-FRONTEND="${ROOT}/src/chora_frontend"
+FRONTEND="${ROOT}/src/monad_frontend"
 
 mkdir -p "${OUT}"
 
-echo "==> icp build chora_backend"
+echo "==> icp build monad_backend"
 cd "${ROOT}"
-icp build chora_backend
+icp build monad_backend
 
 # icp 1.x writes raw wasm (no extension) here; older layouts keep a .wasm suffix.
 WASM_CANDIDATES=(
-	"${ROOT}/.icp/cache/artifacts/chora_backend"
-	"${ROOT}/.icp/canisters/chora_backend/chora_backend.wasm"
-	"${ROOT}/.icp/canisters/chora_backend/chora_backend.wasm.gz"
+	"${ROOT}/.icp/cache/artifacts/monad_backend"
+	"${ROOT}/.icp/canisters/monad_backend/monad_backend.wasm"
+	"${ROOT}/.icp/canisters/monad_backend/monad_backend.wasm.gz"
 )
 
 WASM_SRC=""
@@ -28,22 +28,22 @@ for candidate in "${WASM_CANDIDATES[@]}"; do
 done
 
 if [[ -z "${WASM_SRC}" ]]; then
-	echo "error: chora_backend.wasm not found; searched:" >&2
+	echo "error: monad_backend.wasm not found; searched:" >&2
 	printf '  %s\n' "${WASM_CANDIDATES[@]}" >&2
 	exit 1
 fi
 
-echo "==> gzip wasm -> ${OUT}/chora_backend.wasm.gz"
-gzip -c "${WASM_SRC}" > "${OUT}/chora_backend.wasm.gz"
+echo "==> gzip wasm -> ${OUT}/monad_backend.wasm.gz"
+gzip -c "${WASM_SRC}" > "${OUT}/monad_backend.wasm.gz"
 
 echo "==> npm ci && npm run build (frontend)"
 cd "${FRONTEND}"
 npm ci
 npm run build
 
-echo "==> tar dist -> ${OUT}/chora_frontend.tar.gz"
-tar -C "${FRONTEND}/dist" -czf "${OUT}/chora_frontend.tar.gz" .
+echo "==> tar dist -> ${OUT}/monad_frontend.tar.gz"
+tar -C "${FRONTEND}/dist" -czf "${OUT}/monad_frontend.tar.gz" .
 
 echo "Done:"
-echo "  ${OUT}/chora_backend.wasm.gz"
-echo "  ${OUT}/chora_frontend.tar.gz"
+echo "  ${OUT}/monad_backend.wasm.gz"
+echo "  ${OUT}/monad_frontend.tar.gz"

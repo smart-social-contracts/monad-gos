@@ -1,5 +1,5 @@
 /**
- * Internet Identity for Chora — minimal AuthClient wrapper.
+ * Internet Identity for Monad GOS — minimal AuthClient wrapper.
  * Portal embed uses scoped II delegations from the host; mock mode skips II entirely.
  */
 import { AuthClient } from '@dfinity/auth-client';
@@ -16,9 +16,9 @@ const IDENTITY_PROVIDER = 'https://identity.ic0.app';
 let authClient = null;
 
 export function isAuthMockMode() {
-	if (import.meta.env.VITE_CHORA_MOCK === 'true') return true;
+	if (import.meta.env.VITE_MONAD_GOS_MOCK === 'true') return true;
 	if (isEmbeddedInPortal()) return false;
-	return !import.meta.env.VITE_CHORA_CANISTER_ID;
+	return !import.meta.env.VITE_MONAD_GOS_CANISTER_ID;
 }
 
 async function getAuthClient() {

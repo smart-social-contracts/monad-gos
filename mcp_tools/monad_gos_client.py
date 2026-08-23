@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Thin client for the Chora backend canister.
+Thin client for the Monad GOS backend canister.
 
-Uses ``icp canister call`` against the live Candid interface in chora_backend.did.
+Uses ``icp canister call`` against the live Candid interface in monad_backend.did.
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Literal, Optional, TypedDict
 
-ChoraDomain = Literal[
+MonadGosDomain = Literal[
     "finance", "justice", "land", "system", "governance", "identity"
 ]
 ThreadVisibility = Literal["private", "public"]
@@ -30,8 +30,8 @@ _ICP_NETWORK = {
     "local": "local",
 }
 
-_CHORA_DID = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "chora_backend.did")
+_MONAD_GOS_DID = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "monad_backend.did")
 )
 
 
@@ -40,7 +40,7 @@ import icp_candid as _ct
 
 class SubmitWishRequest(TypedDict):
     text: str
-    domain: ChoraDomain
+    domain: MonadGosDomain
     author_principal: str
     assistant_id: str
 
@@ -48,7 +48,7 @@ class SubmitWishRequest(TypedDict):
 class SubmitWishResponse(TypedDict):
     wish_id: str
     epoch: str
-    domain: ChoraDomain
+    domain: MonadGosDomain
     author_pseudonym: str
     sealed: bool
 
@@ -201,28 +201,28 @@ def _thread_message(raw: dict[str, Any]) -> ThreadMessage:
 
 
 @dataclass
-class ChoraClient:
-    """HTTP/Candid agent for the Chora backend canister."""
+class MonadGosClient:
+    """HTTP/Candid agent for the Monad GOS backend canister."""
 
     canister_id: str = field(
-        default_factory=lambda: os.getenv("CHORA_CANISTER_ID", MAINNET_CANISTER_ID).strip()
+        default_factory=lambda: os.getenv("MONAD_GOS_CANISTER_ID", MAINNET_CANISTER_ID).strip()
         or MAINNET_CANISTER_ID
     )
     network: str = field(
-        default_factory=lambda: os.getenv("CHORA_NETWORK", "staging").strip() or "staging"
+        default_factory=lambda: os.getenv("MONAD_GOS_NETWORK", "staging").strip() or "staging"
     )
     base_url: str = field(
-        default_factory=lambda: os.getenv("CHORA_BASE_URL", DEFAULT_IC_HOST).strip()
+        default_factory=lambda: os.getenv("MONAD_GOS_BASE_URL", DEFAULT_IC_HOST).strip()
         or DEFAULT_IC_HOST
     )
     candid_path: str = field(
-        default_factory=lambda: os.getenv("CHORA_CANDID_PATH", _CHORA_DID).strip() or _CHORA_DID
+        default_factory=lambda: os.getenv("MONAD_GOS_CANDID_PATH", _MONAD_GOS_DID).strip() or _MONAD_GOS_DID
     )
 
     def _require_canister(self) -> str:
         if not self.canister_id:
             raise ValueError(
-                "CHORA_CANISTER_ID is not set; cannot reach the Chora backend"
+                "MONAD_GOS_CANISTER_ID is not set; cannot reach the Monad GOS backend"
             )
         return self.canister_id
 
@@ -295,7 +295,7 @@ class ChoraClient:
             f"domain = {_candid_text(request['domain'])}; "
             f"ciphertext = {_candid_text(cipher)}; "
             f"epoch = {_candid_text(wish_epoch)}; "
-            f"assistant_id = {_candid_text(request.get('assistant_id') or 'chora-mcp')}; "
+            f"assistant_id = {_candid_text(request.get('assistant_id') or 'monad-mcp')}; "
             "})"
         )
         raw = self._call("submit_wish", args, identity=identity, query=False)
@@ -487,7 +487,7 @@ class ChoraClient:
         return {"vote_id": vote_id}
 
 
-_default_client: Optional[ChoraClient] = None
+_default_client: Optional[MonadGosClient] = None
 
 
 def get_client(
@@ -495,15 +495,15 @@ def get_client(
     canister_id: str = "",
     network: str = "",
     base_url: str = "",
-) -> ChoraClient:
-    """Return a process-wide ChoraClient, optionally overriding env defaults."""
+) -> MonadGosClient:
+    """Return a process-wide MonadGosClient, optionally overriding env defaults."""
     global _default_client
     if canister_id or network or base_url:
-        return ChoraClient(
-            canister_id=canister_id or os.getenv("CHORA_CANISTER_ID", MAINNET_CANISTER_ID).strip() or MAINNET_CANISTER_ID,
-            network=network or os.getenv("CHORA_NETWORK", "staging").strip() or "staging",
-            base_url=base_url or os.getenv("CHORA_BASE_URL", DEFAULT_IC_HOST).strip() or DEFAULT_IC_HOST,
+        return MonadGosClient(
+            canister_id=canister_id or os.getenv("MONAD_GOS_CANISTER_ID", MAINNET_CANISTER_ID).strip() or MAINNET_CANISTER_ID,
+            network=network or os.getenv("MONAD_GOS_NETWORK", "staging").strip() or "staging",
+            base_url=base_url or os.getenv("MONAD_GOS_BASE_URL", DEFAULT_IC_HOST).strip() or DEFAULT_IC_HOST,
         )
     if _default_client is None:
-        _default_client = ChoraClient()
+        _default_client = MonadGosClient()
     return _default_client

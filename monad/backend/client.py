@@ -1,4 +1,4 @@
-"""IC mainnet client for the Chora backend canister."""
+"""IC mainnet client for the Monad GOS backend canister."""
 
 from __future__ import annotations
 
@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_HOST = "https://icp0.io"
 DEFAULT_CANISTER_ID = "sea3h-pyaaa-aaaab-qhewq-cai"
-DEFAULT_CANDID_PATH = Path(__file__).resolve().parents[2] / "chora_backend.did"
-DEFAULT_PEM_PATH = Path(__file__).resolve().parents[1] / "keys" / "chora-monad.pem"
+DEFAULT_CANDID_PATH = Path(__file__).resolve().parents[2] / "monad_backend.did"
+DEFAULT_PEM_PATH = Path(__file__).resolve().parents[1] / "keys" / "monad-executive.pem"
 
 EPOCH_PHASE = Types.Variant(
     {
@@ -193,8 +193,8 @@ def _format_ggg_error(err: dict[str, Any]) -> str:
     return f"{name}: {payload}"
 
 
-class ChoraBackendClient:
-    """Authenticated client for Monad-gated Chora backend methods."""
+class MonadGosBackendClient:
+    """Authenticated client for Monad-gated Monad GOS backend methods."""
 
     def __init__(
         self,
@@ -428,13 +428,13 @@ class ChoraBackendClient:
         return wishes
 
 
-def load_client() -> ChoraBackendClient:
+def load_client() -> MonadGosBackendClient:
     """Construct a client from environment variables."""
     pem_path = os.environ.get("MONAD_KEY_PATH", str(DEFAULT_PEM_PATH))
     host = os.environ.get("MONAD_IC_HOST", DEFAULT_HOST)
     canister_id = os.environ.get("MONAD_CANISTER_ID", DEFAULT_CANISTER_ID)
     candid_path = os.environ.get("MONAD_CANDID_PATH", str(DEFAULT_CANDID_PATH))
-    return ChoraBackendClient(
+    return MonadGosBackendClient(
         pem_path=pem_path,
         host=host,
         canister_id=canister_id,

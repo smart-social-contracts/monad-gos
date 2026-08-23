@@ -1,5 +1,5 @@
-// Chora backend v0.2 — slim Motoko GGG + Agora + alignment + grammar + communication.
-// Matches ggg.did v0.2.0 for Chora slim scope, plus Chora setup/admin extensions.
+// Monad GOS backend v0.2 — slim Motoko GGG + Agora + alignment + grammar + communication.
+// Matches ggg.did v0.2.0 for Monad GOS slim scope, plus Monad GOS setup/admin extensions.
 
 type PrincipalId = text;
 type EntityId = text;
@@ -296,7 +296,7 @@ service : {
   "reply_to_thread" : (ThreadId, text) -> (Result_ThreadMessageId);
   "get_epoch_status" : () -> (EpochStatus) query;
 
-  // Chora setup / admin extensions (not in ggg.did)
+  // Monad GOS setup / admin extensions (not in ggg.did)
   "current_epoch" : () -> (text) query;
   "seal_epoch" : () -> (Result);
   "record_due_payment" : () -> ();
@@ -315,7 +315,7 @@ service : {
   "set_codex_commit" : (text) -> (Result);
   "codex_spend" : (text, nat) -> (Result);
 
-  // Chora in-realm setup wizard
+  // Monad GOS in-realm setup wizard
   "enter_setup" : (principal, text, text) -> (text);
   "get_setup_state" : () -> (SetupState) query;
   "save_setup_draft" : (SetupDraft) -> (Result);

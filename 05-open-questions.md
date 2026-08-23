@@ -54,15 +54,15 @@ Unresolved.
   self-limiting — but it is not closed by the codex. Recorded here as a known,
   accepted exposure rather than an open question.
 - **The assistant still shapes the wish.** Citizens bring their own assistant
-  via the Chora MCP server, so the "front-door model shapes the realm's will"
-  risk becomes the citizen's *choice* rather than a Chora-imposed component.
+  via the Monad MCP server, so the "front-door model shapes the realm's will"
+  risk becomes the citizen's *choice* rather than a Monad GOS-imposed component.
   That removes the governance burden (no pinned model hash) but not the deeper
   point: the assistant mediating a citizen's intent still influences what the
   realm hears. Now it is distributed across many assistants rather than one
   pinned model.
-- **Assistant credential security.** Chora MCP lets third-party assistants act
+- **Assistant credential security.** Monad MCP lets third-party assistants act
   with a citizen's authority. A compromised assistant could submit wishes or
-  votes as the citizen. Pairing tokens (`chmcp_…`) provide scoped access,
+  votes as the citizen. Pairing tokens (`mgosmcp_…`) provide scoped access,
   consent, and revocation; the open work is **delegated signing** for on-chain
   writes (see below).
 - **Monad lobbying.** Mid-epoch clarification is useful *and* is the Monad
@@ -75,6 +75,6 @@ Unresolved.
 - The codex grammar's formal definition (valid entity set, spend caps, forbidden
   ops).
 - The kill-switch mechanism in detail.
-- **Chora MCP delegated signing** — letting an MCP client sign on-chain writes
+- **Monad MCP delegated signing** — letting an MCP client sign on-chain writes
   (submit wish, cast vote) as the citizen via an II session delegation.
 - Threshold-aggregate decryption for wishes.

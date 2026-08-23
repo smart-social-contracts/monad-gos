@@ -5,10 +5,10 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 
 /**
  * Frontend env (optional unless noted):
- * - VITE_CHORA_CANISTER_ID — backend canister
+ * - VITE_MONAD_GOS_CANISTER_ID — backend canister
  * - VITE_IC_HOST — replica / IC gateway (default http://127.0.0.1:4943)
- * - VITE_CHORA_MOCK — mock data when true
- * - VITE_CHORA_MCP_URL — Chora MCP server base URL (default http://127.0.0.1:5002)
+ * - VITE_MONAD_GOS_MOCK — mock data when true
+ * - VITE_MONAD_MCP_URL — Monad MCP server base URL (default http://127.0.0.1:5002)
  * - VITE_MONAD_PRINCIPAL — Monad author principal for thread UI
  */
 
@@ -20,11 +20,11 @@ const distHtml = `<!DOCTYPE html>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <title>Chora</title>
-    <link rel="stylesheet" href="./chora-frontend.css?v=${BUILD_ID}" />
+    <title>Monad GOS</title>
+    <link rel="stylesheet" href="./monad-gos-frontend.css?v=${BUILD_ID}" />
   </head>
   <body>
-    <div id="chora-root"></div>
+    <div id="monad-gos-root"></div>
     <script type="module" src="./index.js?v=${BUILD_ID}"></script>
   </body>
 </html>
@@ -56,7 +56,7 @@ export default defineConfig({
 	build: {
 		lib: {
 			entry: resolve(__dirname, 'src/index.ts'),
-			name: 'ChoraFrontend',
+			name: 'MonadGosFrontend',
 			formats: ['es'],
 			fileName: () => 'index.js',
 		},

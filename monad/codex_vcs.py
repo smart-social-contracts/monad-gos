@@ -9,7 +9,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-CODEX_PATH = "src/chora_backend/codex/codex.mo"
+CODEX_PATH = "src/monad_backend/codex/codex.mo"
 
 
 def _run(args: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -44,5 +44,5 @@ def publish(message: str, *, deploy: bool = True) -> str:
 
 
 def deploy_backend() -> None:
-    _run(["icp", "deploy", "chora_backend", "--environment", "ic", "--mode", "upgrade"])
-    logger.info("Deployed chora_backend")
+    _run(["icp", "deploy", "monad_backend", "--environment", "ic", "--mode", "upgrade"])
+    logger.info("Deployed monad_backend")

@@ -3,8 +3,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VENV="$ROOT/mcp_server/.venv"
-PIDFILE="${CHORA_MCP_PIDFILE:-/tmp/chora-mcp.pid}"
-LOG="${CHORA_MCP_LOG:-/tmp/chora-mcp.log}"
+PIDFILE="${MONAD_MCP_PIDFILE:-/tmp/monad-mcp.pid}"
+LOG="${MONAD_MCP_LOG:-/tmp/monad-mcp.log}"
 PYTHONPATH="$ROOT:$ROOT/mcp_tools"
 export PYTHONPATH
 
@@ -13,10 +13,10 @@ usage() {
 Usage: $(basename "$0") {start|stop|status|logs|fg}
 
 Environment:
-  CHORA_MCP_PORT       (default 5002)
-  CHORA_MCP_HOST       (default 127.0.0.1)
-  CHORA_MCP_LOG        (default /tmp/chora-mcp.log)
-  CHORA_MCP_PIDFILE    (default /tmp/chora-mcp.pid)
+  MONAD_MCP_PORT       (default 5002)
+  MONAD_MCP_HOST       (default 127.0.0.1)
+  MONAD_MCP_LOG        (default /tmp/monad-mcp.log)
+  MONAD_MCP_PIDFILE    (default /tmp/monad-mcp.pid)
 EOF
 }
 
@@ -36,19 +36,19 @@ case "$cmd" in
   start)
     ensure_venv
     if is_running; then
-      echo "chora-mcp already running (pid $(cat "$PIDFILE"))"
+      echo "monad-mcp already running (pid $(cat "$PIDFILE"))"
       exit 0
     fi
     nohup "$VENV/bin/python3" -m mcp_server.server >>"$LOG" 2>&1 &
     echo $! >"$PIDFILE"
-    echo "started chora-mcp pid $(cat "$PIDFILE") (log: $LOG)"
+    echo "started monad-mcp pid $(cat "$PIDFILE") (log: $LOG)"
     ;;
   stop)
     if is_running; then
       kill "$(cat "$PIDFILE")" && rm -f "$PIDFILE"
-      echo "stopped chora-mcp"
+      echo "stopped monad-mcp"
     else
-      echo "chora-mcp is not running"
+      echo "monad-mcp is not running"
       rm -f "$PIDFILE"
     fi
     ;;

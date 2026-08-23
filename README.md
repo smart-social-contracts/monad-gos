@@ -1,20 +1,20 @@
-# Chora
+# Monad GOS
 
-**Chora** is a Governance Operating System (GOS), GGG-compliant, in which an AI
+**Monad GOS** is a Governance Operating System (GOS), GGG-compliant, in which an AI
 executive — the **Monad** — drafts legislation from the stated wishes and
 concerns of citizens, and citizens ratify it by vote.
 
-Where Realms encodes law as Python written by humans (a *codex*), Chora has the
+Where Realms encodes law as Python written by humans (a *codex*), Monad GOS has the
 Monad draft it each epoch from what citizens actually asked for. Same GGG
 entities, same voting, different origin of legislation: **law-as-inference**
 instead of law-as-code.
 
 > Status: **live on IC mainnet**. Backend `sea3h-pyaaa-aaaab-qhewq-cai`,
-> frontend `sndq3-zqaaa-aaaab-qhexa-cai`. GaaS registers this GOS as `chora-gos`.
+> frontend `sndq3-zqaaa-aaaab-qhexa-cai`. GaaS registers this GOS as `monad-gos`.
 
 ## Releases
 
-`gaas` downloads Chora the same way it downloads any other GOS: public GitHub
+`gaas` downloads Monad GOS the same way it downloads any other GOS: public GitHub
 release assets from this repo.
 
 Tag a version to cut a release. CI builds the Motoko backend WASM and the
@@ -27,9 +27,9 @@ git push origin v0.1.0
 
 | Asset | Used by `gaas` as |
 |---|---|
-| `chora_backend.wasm.gz` | backend WASM |
-| `chora_frontend.tar.gz` | frontend asset bundle |
-| `chora_backend.did` | Candid interface |
+| `monad_backend.wasm.gz` | backend WASM |
+| `monad_frontend.tar.gz` | frontend asset bundle |
+| `monad_backend.did` | Candid interface |
 | `checksums.txt` | SHA-256 verification |
 
 ## Design documents
@@ -48,8 +48,8 @@ git push origin v0.1.0
 
 ## One-paragraph summary
 
-Citizens plug their **own AI assistant** (ChatGPT, Claude, …) into **Chora
-MCP** (`chora-mcp`), which exposes tools like `submit_wish`. The assistant
+Citizens plug their **own AI assistant** (ChatGPT, Claude, …) into **Monad GOS
+MCP** (`monad-mcp`), which exposes tools like `submit_wish`. The assistant
 helps the citizen articulate a `Wish`; the wish is encrypted to the Monad's
 vetKey and posted to a canister (the **Agora**). Wishes stream in continuously
 and citizens deliberate publicly while the epoch is open; at the deadline the
