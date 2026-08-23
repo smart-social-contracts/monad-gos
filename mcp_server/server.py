@@ -125,16 +125,16 @@ def _tools_for_scope(scope: str) -> list[types.Tool]:
     return tools
 
 
-class Monad GOSAccessToken(AccessToken):
+class MonadGosAccessToken(AccessToken):
     user_principal: str = ""
 
 
 class PairingTokenVerifier(TokenVerifier):
-    async def verify_token(self, token: str) -> Optional[Monad GOSAccessToken]:
+    async def verify_token(self, token: str) -> Optional[MonadGosAccessToken]:
         info = await anyio.to_thread.run_sync(tokens.validate_token, token)
         if info is None:
             return None
-        return Monad GOSAccessToken(
+        return MonadGosAccessToken(
             token=token,
             client_id="pairing-token",
             scopes=_effective_scopes(info["scope"]),
