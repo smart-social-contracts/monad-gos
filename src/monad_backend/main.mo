@@ -123,6 +123,12 @@ persistent actor MonadGos {
   };
 
   func isSetupAuthorized(caller : Principal) : Bool {
+    if (Principal.isAnonymous(caller)) {
+      return false;
+    };
+    if (inSetup()) {
+      return true;
+    };
     let callerText = Principal.toText(caller);
     if (setupCreator != "" and callerText == setupCreator) {
       true;
