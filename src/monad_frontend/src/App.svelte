@@ -45,6 +45,7 @@
 		isEmbeddedInPortal,
 		portalUiReady,
 		waitForPortalConfig,
+		waitForPortalDelegation,
 	} from './lib/portal-bridge.ts';
 	import AppHeader from './components/AppHeader.svelte';
 	import EpochStatusLine from './components/EpochStatusLine.svelte';
@@ -100,6 +101,13 @@
 	let principalShort = $state(isMockMode() ? 'citizen-mock' : '');
 
 	const needsAuth = $derived(!isMockMode() && !isLoggedIn);
+	const canContinueSetup = $derived.by(() => {
+		void isLoggedIn;
+		return (
+			!!setupState?.is_caller_authorized ||
+			(!!setupState?.creator && setupState.creator === getPrincipalText())
+		);
+	});
 	const showComposer = $derived(view === 'broadcast' || view === 'thread');
 	const composerPlaceholder = $derived(
 		view === 'thread'
@@ -234,6 +242,10 @@
 		}
 
 		if (!isMockMode()) {
+			if (isEmbeddedInPortal()) {
+				await waitForPortalDelegation({ timeoutMs: 30_000 });
+				resetActors();
+			}
 			await initAuth();
 			refreshAuthState();
 		}
@@ -551,7 +563,7 @@
 					<p class="monad-gos-muted">Sign in as the founder to continue setup.</p>
 					<LoginPrompt message="Sign in to continue setup." onlogin={handleLogin} />
 				</section>
-			{:else if setupState?.is_caller_authorized}
+			{:else if canContinueSetup}
 				<SetupWizard draft={setupState.draft} oncomplete={handleSetupComplete} />
 			{:else}
 				<section class="setup-gate monad-gos-prose">
