@@ -1,5 +1,9 @@
 # Monad GOS
 
+<p align="center">
+  <img src="brand/monad-gos-lockup.png" alt="Monad GOS" width="420" />
+</p>
+
 **Monad GOS** is a Governance Operating System (GOS), GGG-compliant, in which an AI
 executive — the **Monad** — drafts legislation from the stated wishes and
 concerns of citizens, and citizens ratify it by vote.

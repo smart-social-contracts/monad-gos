@@ -21,6 +21,8 @@ const distHtml = `<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <title>Monad GOS</title>
+    <link rel="icon" type="image/png" href="./favicon.png" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <link rel="stylesheet" href="./monad-gos-frontend.css?v=${BUILD_ID}" />
   </head>
   <body>

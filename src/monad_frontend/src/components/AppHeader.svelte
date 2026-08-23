@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { ConnectionStatus } from '../lib/types';
+	import brandIcon from '../assets/monad-gos-icon.png';
 
 	let {
 		connectionStatus = 'connecting' as ConnectionStatus,
@@ -30,9 +31,7 @@
 
 <div class="app-header">
 	<div class="brand">
-		{#if logoSrc}
-			<img class="brand-logo" src={logoSrc} alt="" />
-		{/if}
+		<img class="brand-logo" src={logoSrc || brandIcon} alt="Monad GOS" />
 		<span class="brand-name">Monad GOS</span>
 		<span
 			class="status"
@@ -80,10 +79,9 @@
 	}
 
 	.brand-logo {
-		width: 1.2rem;
-		height: 1.2rem;
+		width: 1.75rem;
+		height: 1.75rem;
 		object-fit: contain;
-		border-radius: 3px;
 		flex-shrink: 0;
 	}
 

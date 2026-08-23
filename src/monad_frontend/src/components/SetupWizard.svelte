@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import type { SetupDraft, SetupStep } from '../lib/types';
+	import brandIcon from '../assets/monad-gos-icon.png';
 	import { completeSetup, saveSetupDraft } from '../monad_gos_api.js';
 
 	let {
@@ -306,6 +307,7 @@
 		<p class="opening">Opening the realm…</p>
 	{:else if step === 'welcome'}
 		<div class="step-body">
+			<img class="welcome-brand" src={brandIcon} alt="Monad GOS" />
 			<p>
 				You are founding a new Monad GOS realm. The Monad proposes; citizens ratify.
 			</p>
@@ -581,6 +583,12 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
+	}
+
+	.welcome-brand {
+		width: 4.5rem;
+		height: 4.5rem;
+		object-fit: contain;
 	}
 
 	.intro {
