@@ -1,7 +1,7 @@
 # Monad GOS
 
 <p align="center">
-  <img src="brand/monad-gos-lockup.png" alt="Monad GOS" width="420" />
+  <img src="brand/monad-gos-lockup.png" alt="Monad" width="420" />
 </p>
 
 **Monad GOS** is a Governance Operating System (GOS), GGG-compliant, in which an AI

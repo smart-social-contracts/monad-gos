@@ -31,8 +31,8 @@
 
 <div class="app-header">
 	<div class="brand">
-		<img class="brand-logo" src={logoSrc || brandIcon} alt="monad-gos" />
-		<span class="brand-name">MonadGOS</span>
+		<img class="brand-logo" src={logoSrc || brandIcon} alt="Monad" />
+		<span class="brand-name">Monad</span>
 		<span
 			class="status"
 			class:connected={connectionStatus === 'connected'}
@@ -79,8 +79,8 @@
 	}
 
 	.brand-logo {
-		width: 1.75rem;
-		height: 1.75rem;
+		width: 2.2rem;
+		height: 2.2rem;
 		object-fit: contain;
 		flex-shrink: 0;
 	}

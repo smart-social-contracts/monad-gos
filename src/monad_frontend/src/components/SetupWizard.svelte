@@ -307,7 +307,7 @@
 		<p class="opening">Opening the realm…</p>
 	{:else if step === 'welcome'}
 		<div class="step-body">
-			<img class="welcome-brand" src={brandLockup} alt="monad-gos" />
+			<img class="welcome-brand" src={brandLockup} alt="Monad" />
 			<p>
 				You are founding a new Monad GOS realm. The Monad proposes; citizens ratify.
 			</p>
