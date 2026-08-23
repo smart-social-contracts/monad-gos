@@ -21,3 +21,7 @@ canisters:
       type: "@dfinity/asset-canister@v2.2.0"
       configuration:
         dir: dist
+        build:
+          - npm --prefix src/monad_frontend ci
+          - npm --prefix src/monad_frontend run build
+          - rm -rf dist && cp -a src/monad_frontend/dist dist
