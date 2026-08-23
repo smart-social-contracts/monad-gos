@@ -12,6 +12,26 @@ instead of law-as-code.
 > Status: **live on IC mainnet**. Backend `sea3h-pyaaa-aaaab-qhewq-cai`,
 > frontend `sndq3-zqaaa-aaaab-qhexa-cai`. GaaS registers this GOS as `chora-gos`.
 
+## Releases
+
+`gaas` downloads Chora the same way it downloads any other GOS: public GitHub
+release assets from this repo.
+
+Tag a version to cut a release. CI builds the Motoko backend WASM and the
+Svelte frontend bundle, then uploads them:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+| Asset | Used by `gaas` as |
+|---|---|
+| `chora_backend.wasm.gz` | backend WASM |
+| `chora_frontend.tar.gz` | frontend asset bundle |
+| `chora_backend.did` | Candid interface |
+| `checksums.txt` | SHA-256 verification |
+
 ## Design documents
 
 | Doc | Contents |

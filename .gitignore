@@ -11,6 +11,9 @@ __pycache__/
 .venv/
 venv/
 
+# Release packaging
+artifacts/
+
 # Frontend
 node_modules/
 dist/

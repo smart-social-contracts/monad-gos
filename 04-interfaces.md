@@ -19,21 +19,21 @@ reimplementation is the point: it contributes a working Motoko GGG to the
 ecosystem and proves gos-as-a-service runs interoperable backend canisters in
 different languages.
 
-To flip `chora-gos` to available, the release repo
-(`smart-social-contracts/chora`) must ship:
+GaaS fetches Chora from public GitHub releases on
+`smart-social-contracts/chora-gos`:
 
 | Field | Value |
 |---|---|
 | `id` | `chora-gos` |
 | `label` | `Chora GOS` |
 | `default_version` | `v0.1.0` |
-| `release_repo` | `smart-social-contracts/chora` |
+| `release_repo` | `smart-social-contracts/chora-gos` |
 | `artifacts.backend_wasm_key` | `chora-backend` |
 | `artifacts.frontend_wasm_key` | `chora-assets` |
 | `artifacts.backend_asset` | `chora_backend.wasm.gz` |
 | `artifacts.frontend_asset` | `chora_frontend.tar.gz` |
 | `loader_profile` | `chora-iframe-v1` |
-| `available` | `false` → `true` when shipped |
+| `available` | `true` |
 
 Chora declares **no codex/extension catalog** (unlike `realms-gos`), so GaaS
 skips catalog seeding for it.

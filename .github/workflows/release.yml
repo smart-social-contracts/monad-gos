@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: src/chora_frontend/package-lock.json
+
+      - name: Install icp-cli
+        run: |
+          npm i -g @icp-sdk/icp-cli
+          icp --version
+
+      - name: Build GaaS artifacts
+        run: bash scripts/package-gaas-artifacts.sh
+
+      - name: Stage release assets
+        run: |
+          cp artifacts/chora_backend.wasm.gz ./chora_backend.wasm.gz
+          cp artifacts/chora_frontend.tar.gz ./chora_frontend.tar.gz
+          echo "# SHA-256 checksums for release assets" > checksums.txt
+          for f in chora_backend.wasm.gz chora_backend.did chora_frontend.tar.gz; do
+            sha256sum "$f" >> checksums.txt
+          done
+          cat checksums.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            chora_backend.wasm.gz
+            chora_backend.did
+            chora_frontend.tar.gz
+            checksums.txt
