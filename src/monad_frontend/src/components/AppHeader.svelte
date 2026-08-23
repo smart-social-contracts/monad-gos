@@ -31,8 +31,8 @@
 
 <div class="app-header">
 	<div class="brand">
-		<img class="brand-logo" src={logoSrc || brandIcon} alt="Monad GOS" />
-		<span class="brand-name">Monad GOS</span>
+		<img class="brand-logo" src={logoSrc || brandIcon} alt="monad-gos" />
+		<span class="brand-name">monad<span class="brand-hyphen">-</span>gos</span>
 		<span
 			class="status"
 			class:connected={connectionStatus === 'connected'}
@@ -87,6 +87,14 @@
 
 	.brand-name {
 		flex-shrink: 0;
+		font-family: var(--monad-gos-font);
+		font-weight: 500;
+		letter-spacing: 0.03em;
+		color: #50663e;
+	}
+
+	.brand-hyphen {
+		color: #d7a947;
 	}
 
 	.status {
