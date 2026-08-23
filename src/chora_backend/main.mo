@@ -153,8 +153,8 @@ persistent actor Chora {
   };
 
   func escapeJsonText(text : Text) : Text {
-    let withBackslash = Text.replace(text, #text "\\", #text "\\\\");
-    Text.replace(withBackslash, #text "\"", #text "\\\"");
+    let withBackslash = Text.replace(text, #text "\\", "\\\\");
+    Text.replace(withBackslash, #text "\"", "\\\"");
   };
 
   func setupJsonOk() : Text {
