@@ -22,10 +22,12 @@ jobs:
           cache: npm
           cache-dependency-path: src/chora_frontend/package-lock.json
 
-      - name: Install icp-cli
+      - name: Install icp-cli and Motoko toolchain
         run: |
-          npm i -g @icp-sdk/icp-cli
+          npm i -g @icp-sdk/icp-cli @icp-sdk/ic-wasm ic-mops
           icp --version
+          ic-wasm --version
+          mops --version
 
       - name: Build GaaS artifacts
         run: bash scripts/package-gaas-artifacts.sh
