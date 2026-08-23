@@ -186,7 +186,7 @@ persistent actor MonadGos {
       return;
     };
     let payload =
-      "{\"realm_backend_canister_id\":\"" # Principal.toText(Principal.fromActor(Monad GOS)) # "\"}";
+      "{\"realm_backend_canister_id\":\"" # Principal.toText(Principal.fromActor(MonadGos)) # "\"}";
     try {
       let registry : Registry = actor (setupRegistryId);
       ignore await registry.realm_setup_completed(payload);
