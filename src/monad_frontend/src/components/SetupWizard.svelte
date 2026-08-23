@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import type { SetupDraft, SetupStep } from '../lib/types';
-	import brandIcon from '../assets/monad-gos-icon.png';
+	import brandIcon from '../assets/monad-gos-mark.png';
 	import { completeSetup, saveSetupDraft } from '../monad_gos_api.js';
 
 	let {
