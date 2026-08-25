@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { BroadcastMessage, ThreadSummary } from '../lib/types';
+	import { createThreadOpenHandler } from '../lib/conversation.js';
 	import BroadcastCard from './BroadcastCard.svelte';
 
 	let {
@@ -19,6 +20,8 @@
 		onopenthread?: (threadId: string) => void;
 		onlogin?: () => void | Promise<void>;
 	} = $props();
+
+	const openFromEvent = createThreadOpenHandler((threadId) => onopenthread?.(threadId));
 </script>
 
 <section class="broadcast" aria-label="Monad broadcast">
@@ -41,7 +44,12 @@
 			<ul>
 				{#each publicThreads as thread (thread.id)}
 					<li>
-						<button type="button" class="thread-link" onclick={() => onopenthread?.(thread.id)}>
+						<button
+							type="button"
+							class="thread-link"
+							data-thread-id={thread.id}
+							onclick={openFromEvent}
+						>
 							{thread.title}
 							<span class="monad-gos-muted meta">
 								· {thread.participant_count} participants
@@ -106,10 +114,13 @@
 		text-align: left;
 		text-decoration: underline;
 		text-underline-offset: 0.15em;
+		touch-action: manipulation;
 	}
 
-	.thread-link:hover {
-		color: var(--monad-gos-text);
+	@media (hover: hover) and (pointer: fine) {
+		.thread-link:hover {
+			color: var(--monad-gos-text);
+		}
 	}
 
 	.meta {

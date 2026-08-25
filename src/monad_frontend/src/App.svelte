@@ -26,12 +26,14 @@
 		replyToBroadcast,
 		replyToThread,
 		resetActors,
-		submitWish,
+		startThread,
 		monadPrincipal,
 		waitForNewMessage,
 		getReplyInputs,
 		getRealmState,
+		MONAD_REPLY_MISSING,
 	} from './monad_gos_api.js';
+	import { resolveLandingConversation } from './lib/conversation.js';
 	import {
 		formatPrincipalShort,
 		getPrincipalText,
@@ -90,9 +92,6 @@
 	let activeInputs = $state<ReplyInputs | null>(null);
 	let inputsMissing = $state(false);
 
-	let wishPrompt = $state(false);
-	let wishConfirmation = $state<string | null>(null);
-	let wishError = $state<string | null>(null);
 	let threadReplyPrompt = $state(false);
 
 	const monadAuthor = monadPrincipal();
@@ -114,17 +113,15 @@
 			? 'Continue the conversation…'
 			: replyBroadcastId
 				? 'Write a reply… · opens a thread'
-				: 'Write a wish…',
+				: 'Write to the Monad… · opens a thread',
 	);
-	const composerSubmitLabel = $derived(
-		view === 'thread' ? 'Send' : replyBroadcastId ? 'Open thread' : 'Send',
-	);
+	const composerSubmitLabel = $derived(view === 'thread' ? 'Send' : 'Open thread');
 	const composerFieldId = $derived(
 		view === 'thread'
 			? 'monad-gos-thread-composer'
 			: replyBroadcastId
 				? 'monad-gos-reply-composer'
-				: 'monad-gos-wish-composer',
+				: 'monad-gos-direct-composer',
 	);
 
 	function refreshAuthState() {
@@ -143,7 +140,6 @@
 			resetActors();
 			refreshAuthState();
 			replyPrompt = false;
-			wishPrompt = false;
 			threadReplyPrompt = false;
 			if (setupActive) {
 				try {
@@ -290,6 +286,7 @@
 
 	async function openThread(threadId: string) {
 		replyBroadcastId = null;
+		error = null;
 		try {
 			const data = await readThread(threadId);
 			if (!data.thread) {
@@ -309,12 +306,60 @@
 		view = 'broadcast';
 	}
 
-	async function submitBroadcastReply(body: string) {
-		if (!replyBroadcastId) return;
-		const { thread_id } = await replyToBroadcast(replyBroadcastId, body);
-		const now = Math.floor(Date.now() / 1000);
+	async function submitBroadcastReply(body: string, broadcastId = replyBroadcastId) {
+		if (!broadcastId) return;
+		const { thread_id } = await replyToBroadcast(broadcastId, body);
 		replyBroadcastId = null;
 		replyPrompt = false;
+		await showOpenedThread(thread_id, body);
+		await awaitMonadReply(thread_id, 1);
+	}
+
+	async function submitThreadReply(body: string) {
+		if (!activeThreadId) return;
+		const priorCount = activeMessages.length;
+		await replyToThread(activeThreadId, body);
+		const data = await readThread(activeThreadId);
+		activeThread = data.thread;
+		activeMessages = data.messages;
+		await awaitMonadReply(activeThreadId, priorCount + 1);
+	}
+
+	async function awaitMonadReply(threadId: string, afterCount: number) {
+		error = null;
+		monadError = null;
+		if (hasVisibleReply(activeMessages, afterCount)) {
+			return;
+		}
+		awaitingMonad = true;
+		try {
+			const latest = await waitForNewMessage(threadId, afterCount);
+			if (latest?.thread) {
+				activeThread = latest.thread;
+				activeMessages = latest.messages;
+			}
+		} catch (e) {
+			error = e instanceof Error ? e.message : MONAD_REPLY_MISSING;
+			monadError = error;
+		} finally {
+			awaitingMonad = false;
+		}
+	}
+
+	function hasVisibleReply(messages: ThreadMessage[], afterCount: number) {
+		return (messages?.length ?? 0) > afterCount;
+	}
+
+	async function submitDirectThread(body: string) {
+		const { thread_id } = await startThread(body);
+		replyBroadcastId = null;
+		replyPrompt = false;
+		await showOpenedThread(thread_id, body);
+		await awaitMonadReply(thread_id, 1);
+	}
+
+	async function showOpenedThread(thread_id: string, body: string) {
+		const now = Math.floor(Date.now() / 1000);
 		activeThreadId = thread_id;
 		activeThread = {
 			id: thread_id,
@@ -349,47 +394,6 @@
 		} catch {
 			/* list refresh is best-effort */
 		}
-		awaitingMonad = true;
-		try {
-			const latest = await waitForNewMessage(thread_id, activeMessages.length);
-			if (latest?.thread) {
-				activeThread = latest.thread;
-				activeMessages = latest.messages;
-			}
-		} finally {
-			awaitingMonad = false;
-		}
-	}
-
-	async function handleBroadcastReply(body: string) {
-		if (needsAuth) {
-			replyPrompt = true;
-			return;
-		}
-		try {
-			await submitBroadcastReply(body);
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Reply failed';
-			throw e;
-		}
-	}
-
-	async function submitThreadReply(body: string) {
-		if (!activeThreadId) return;
-		await replyToThread(activeThreadId, body);
-		const data = await readThread(activeThreadId);
-		activeThread = data.thread;
-		activeMessages = data.messages;
-		awaitingMonad = true;
-		try {
-			const latest = await waitForNewMessage(activeThreadId, activeMessages.length);
-			if (latest?.thread) {
-				activeThread = latest.thread;
-				activeMessages = latest.messages;
-			}
-		} finally {
-			awaitingMonad = false;
-		}
 	}
 
 	async function handleThreadReply(body: string) {
@@ -406,20 +410,29 @@
 		}
 	}
 
-	async function handleWish(body: string) {
-		if (!epochStatus) {
-			throw new Error('Epoch status is not available.');
+	async function handleLandingConversation(body: string) {
+		if (needsAuth) {
+			replyPrompt = true;
+			return;
 		}
-		wishPrompt = false;
-		wishError = null;
-		const result = await submitWish('governance', body, epochStatus.epoch_id);
-		const wishId =
-			result && typeof result === 'object' && 'wish_id' in result
-				? String((result as { wish_id: string }).wish_id)
-				: undefined;
-		wishConfirmation = wishId
-			? `Wish sealed (${wishId}). The Monad will read it when this epoch ends.`
-			: 'Wish sealed. The Monad will read it when this epoch ends.';
+		const decision = resolveLandingConversation(replyBroadcastId, allThreads, broadcasts);
+		try {
+			if (decision.action === 'continue-thread') {
+				if (activeThreadId !== decision.threadId) {
+					await openThread(decision.threadId);
+				}
+				await submitThreadReply(body);
+				return;
+			}
+			if (decision.action === 'open-from-broadcast') {
+				await submitBroadcastReply(body, decision.broadcastId);
+				return;
+			}
+			await submitDirectThread(body);
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Could not open a thread with the Monad.';
+			throw e;
+		}
 	}
 
 	async function handleComposerSubmit(body: string) {
@@ -427,20 +440,7 @@
 			await handleThreadReply(body);
 			return;
 		}
-		if (replyBroadcastId) {
-			await handleBroadcastReply(body);
-			return;
-		}
-		if (needsAuth) {
-			wishPrompt = true;
-			return;
-		}
-		try {
-			await handleWish(body);
-		} catch (e) {
-			wishConfirmation = null;
-			wishError = e instanceof Error ? e.message : 'Your wish could not be sent.';
-		}
+		await handleLandingConversation(body);
 	}
 
 	async function handleVote(proposalId: string, choice: 'yes' | 'no' | 'abstain') {
@@ -658,6 +658,7 @@
 								messages={activeMessages}
 								monadAuthor={monadAuthor}
 								awaitingMonad={awaitingMonad}
+								error={error}
 								onback={goBroadcast}
 								onopeninputs={openInputs}
 							/>
@@ -693,11 +694,8 @@
 								<button type="button" class="cancel-reply" onclick={cancelReply}>Cancel</button>
 							</div>
 						{/if}
-						{#if view === 'broadcast' && wishConfirmation}
-							<p class="composer-status" role="status" aria-live="polite">{wishConfirmation}</p>
-						{/if}
-						{#if view === 'broadcast' && wishError}
-							<p class="composer-error" role="alert">{wishError}</p>
+						{#if view === 'broadcast' && error && connectionStatus !== 'error'}
+							<p class="composer-error" role="alert">{error}</p>
 						{/if}
 						<MessageComposer
 							placeholder={composerPlaceholder}
@@ -705,11 +703,8 @@
 							fieldId={composerFieldId}
 							onsubmit={handleComposerSubmit}
 						/>
-						{#if view === 'broadcast' && (wishPrompt || replyPrompt)}
-							<LoginPrompt
-								message={replyBroadcastId ? 'Sign in to reply.' : 'Sign in to send a wish.'}
-								onlogin={handleLogin}
-							/>
+						{#if view === 'broadcast' && replyPrompt}
+							<LoginPrompt message="Sign in to talk to the Monad." onlogin={handleLogin} />
 						{/if}
 						{#if view === 'thread' && threadReplyPrompt}
 							<LoginPrompt message="Sign in to reply." onlogin={handleLogin} />
@@ -860,13 +855,6 @@
 	}
 
 	.cancel-reply:hover {
-		color: var(--monad-gos-text);
-	}
-
-	.composer-status {
-		margin: 0 0 0.35rem;
-		font-family: var(--monad-gos-font-ui);
-		font-size: 0.8rem;
 		color: var(--monad-gos-text);
 	}
 

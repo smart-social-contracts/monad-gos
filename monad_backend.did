@@ -293,6 +293,7 @@ service : {
   "list_threads" : () -> (vec ThreadSummary) query;
   "read_thread" : (ThreadId) -> (opt Thread) query;
   "reply_to_broadcast" : (BroadcastId, text) -> (Result_ThreadId);
+  "start_thread" : (text) -> (Result_ThreadId);
   "reply_to_thread" : (ThreadId, text) -> (Result_ThreadMessageId);
   "get_epoch_status" : () -> (EpochStatus) query;
 
