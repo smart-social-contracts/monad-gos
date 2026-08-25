@@ -43,7 +43,10 @@ const assetsJson = `[
 
 export default defineConfig({
 	plugins: [
-		svelte({ emitCss: false, hot: !process.env.VITEST }),
+		svelte({
+			emitCss: false,
+			compilerOptions: { hmr: !process.env.VITEST },
+		}),
 		svelteTesting(),
 		{
 			name: 'emit-index-html',
