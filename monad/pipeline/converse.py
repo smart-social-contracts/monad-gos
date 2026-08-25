@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from engine.base import LLMEngine
+from pipeline.receipt import build_receipt
 
 SYSTEM_PROMPT = """You are the Monad of this Monad GOS realm — the realm's executive voice.
 A citizen is speaking to you in a private thread.
@@ -80,8 +81,15 @@ def generate_reply_bundle(
         text = text[:797].rstrip() + "…"
     if not text:
         raise ValueError("empty Monad reply")
+    describe = engine.describe()
+    receipt = build_receipt(
+        {"prompt": prompt, **describe},
+        message_id="",
+        kind="thread",
+    )
     return {
         "body": text,
         "prompt": prompt,
-        **engine.describe(),
+        **describe,
+        "receipt_hash": receipt["receipt_hash"],
     }

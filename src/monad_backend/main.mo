@@ -461,6 +461,13 @@ persistent actor MonadGos {
         if (Text.size(inputs.prompt) == 0) {
           return #err(#invalid_input("prompt is required"));
         };
+        if (Text.size(inputs.receipt_hash) == 0) {
+          return #err(#invalid_input("receipt_hash is required"));
+        };
+        switch (Map.get(replyInputsStore, Text.compare, inputs.message_id)) {
+          case (?_) return #err(#conflict("receipt already recorded"));
+          case null {};
+        };
         let stored : Types.ReplyInputs = {
           inputs with created_at = Types.now();
         };

@@ -136,6 +136,7 @@ REPLY_INPUTS = Types.Record(
         "seed": Types.Text,
         "json_mode": Types.Bool,
         "created_at": Types.Nat64,
+        "receipt_hash": Types.Text,
     }
 )
 
@@ -394,13 +395,28 @@ class MonadGosBackendClient:
             "seed": str(inputs.get("seed", "")),
             "json_mode": bool(inputs.get("json_mode", False)),
             "created_at": 0,
+            "receipt_hash": str(inputs.get("receipt_hash", "")),
         }
         args = [{"type": REPLY_INPUTS, "value": payload}]
         _unwrap_ok(self._update("record_reply_inputs", args, [RESULT]), operation="record_reply_inputs")
 
-    def post_broadcast(self, text: str) -> str:
+    def post_broadcast(self, text: str, receipt: dict[str, Any] | None = None) -> str:
         args = [{"type": Types.Text, "value": text}]
-        return str(_unwrap_ok(self._update("post_broadcast", args, [RESULT_BROADCAST_ID]), operation="post_broadcast"))
+        broadcast_id = str(
+            _unwrap_ok(self._update("post_broadcast", args, [RESULT_BROADCAST_ID]), operation="post_broadcast")
+        )
+        if receipt:
+            from pipeline.receipt import build_receipt
+
+            self.record_reply_inputs(
+                build_receipt(
+                    receipt,
+                    message_id=broadcast_id,
+                    broadcast_id=broadcast_id,
+                    kind="broadcast",
+                )
+            )
+        return broadcast_id
 
     def validate_proposal(self, proposal_input: dict[str, Any]) -> None:
         args = [{"type": SUBMIT_PROPOSAL_INPUT, "value": proposal_input}]

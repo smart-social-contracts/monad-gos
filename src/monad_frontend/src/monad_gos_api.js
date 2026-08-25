@@ -13,6 +13,7 @@ import {
 	mockBroadcast,
 	mockEpochStatus,
 	mockProposals,
+	mockReplyInputs,
 	mockThreads,
 } from './lib/mock_data.js';
 
@@ -220,6 +221,7 @@ const gggIdlFactory = ({ IDL }) => {
 		seed: IDL.Text,
 		json_mode: IDL.Bool,
 		created_at: IDL.Nat64,
+		receipt_hash: IDL.Text,
 	});
 	const SetupPersonality = IDL.Record({
 		voice: IDL.Text,
@@ -567,28 +569,7 @@ export async function waitForNewMessage(threadId, previousCount, timeoutMs = 450
 	return null;
 }
 
-export async function getReplyInputs(messageId) {
-	if (MOCK_MODE) {
-		await delay();
-		return {
-			message_id: messageId,
-			thread_id: 'thread-mock',
-			broadcast_id: '',
-			kind: 'thread',
-			model: 'mock',
-			engine: 'mock',
-			engine_host: 'local',
-			prompt: 'Mock prompt for reproducibility.',
-			temperature: '0',
-			num_predict: 0,
-			seed: '0',
-			json_mode: false,
-			created_at: Math.floor(Date.now() / 1000),
-		};
-	}
-	const actor = await getQueryActor();
-	const raw = await actor.get_reply_inputs(messageId);
-	const inputs = raw[0];
+function mapReplyInputs(inputs) {
 	if (!inputs) return null;
 	return {
 		message_id: inputs.message_id,
@@ -604,7 +585,18 @@ export async function getReplyInputs(messageId) {
 		seed: inputs.seed,
 		json_mode: Boolean(inputs.json_mode),
 		created_at: Number(inputs.created_at),
+		receipt_hash: inputs.receipt_hash || '',
 	};
+}
+
+export async function getReplyInputs(messageId) {
+	if (isMockMode()) {
+		await delay();
+		return mapReplyInputs(mockReplyInputs[messageId] ?? null);
+	}
+	const actor = await getQueryActor();
+	const raw = await actor.get_reply_inputs(messageId);
+	return mapReplyInputs(raw[0]);
 }
 
 export async function readThread(threadId) {

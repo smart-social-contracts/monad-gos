@@ -10,6 +10,7 @@ from typing import Any
 from backend.client import MonadGosBackendClient
 from engine.base import LLMEngine
 from pipeline.converse import generate_reply_bundle
+from pipeline.receipt import build_receipt
 
 logger = logging.getLogger(__name__)
 
@@ -41,13 +42,15 @@ def reply_if_needed(
     try:
         bundle = generate_reply_bundle(engine, thread.get("messages") or [], backend.principal)
         message_id = backend.reply_to_thread(thread_id, bundle["body"])
+        visibility = str(thread.get("visibility") or "private")
         backend.record_reply_inputs(
-            {
-                **bundle,
-                "message_id": message_id,
-                "thread_id": thread_id,
-                "kind": "thread",
-            }
+            build_receipt(
+                bundle,
+                message_id=message_id,
+                thread_id=thread_id,
+                kind="thread",
+                thread_visibility=visibility,
+            )
         )
         logger.info("Replied to %s as %s", thread_id, message_id)
         return message_id

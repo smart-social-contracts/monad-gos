@@ -5,11 +5,13 @@
 	let {
 		message,
 		onreply,
+		onopeninputs,
 		needsAuth = false,
 		onlogin,
 	}: {
 		message: BroadcastMessage;
 		onreply?: (broadcastId: string) => void;
+		onopeninputs?: (messageId: string) => void;
 		needsAuth?: boolean;
 		onlogin?: () => void | Promise<void>;
 	} = $props();
@@ -45,6 +47,9 @@
 	<p class="body">{message.body}</p>
 	<footer>
 		<button type="button" class="reply-link" onclick={handleReply}>Reply</button>
+		<button type="button" class="reply-link" onclick={() => onopeninputs?.(message.id)}>
+			Inputs
+		</button>
 		{#if replyPrompt}
 			<LoginPrompt message="Sign in to reply." onlogin={onlogin} />
 		{/if}
@@ -82,6 +87,10 @@
 	}
 
 	footer {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.85rem;
 		margin-top: 0.5rem;
 	}
 

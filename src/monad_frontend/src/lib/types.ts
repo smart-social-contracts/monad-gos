@@ -62,6 +62,7 @@ export interface ReplyInputs {
 	seed: string;
 	json_mode: boolean;
 	created_at: number;
+	receipt_hash: string;
 }
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'error';
