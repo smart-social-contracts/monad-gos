@@ -236,7 +236,8 @@ module {
   public type Result_BroadcastId = { #ok : BroadcastId; #err : GggError };
   public type Result_Text = { #ok : Text; #err : GggError };
 
-  /// Inputs used to produce a Monad reply. Same access rule as the thread.
+  /// Inputs used to produce a Monad reply, plus a content-commitment hash.
+  /// Same access rule as the thread (broadcast receipts are public).
   public type ReplyInputs = {
     message_id : ThreadMessageId;
     thread_id : ThreadId;
@@ -251,6 +252,8 @@ module {
     seed : Text;
     json_mode : Bool;
     created_at : Timestamp;
+    /// sha256 of inputs + model id + params; immutable once recorded.
+    receipt_hash : Text;
   };
 
   public let GGG_VERSION : Text = "0.2.0";

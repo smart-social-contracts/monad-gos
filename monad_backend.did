@@ -239,6 +239,7 @@ type ReplyInputs = record {
   seed : text;
   json_mode : bool;
   created_at : Timestamp;
+  receipt_hash : text;
 };
 
 type SetupPersonality = record {

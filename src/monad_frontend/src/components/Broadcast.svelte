@@ -9,6 +9,7 @@
 		needsAuth = false,
 		onreply,
 		onopenthread,
+		onopeninputs,
 		onlogin,
 	}: {
 		broadcasts?: BroadcastMessage[];
@@ -17,6 +18,7 @@
 		needsAuth?: boolean;
 		onreply?: (broadcastId: string) => void;
 		onopenthread?: (threadId: string) => void;
+		onopeninputs?: (messageId: string) => void;
 		onlogin?: () => void | Promise<void>;
 	} = $props();
 </script>
@@ -31,7 +33,13 @@
 			<p class="monad-gos-muted empty">No broadcasts yet.</p>
 		{:else}
 			{#each broadcasts as message (message.id)}
-				<BroadcastCard message={message} onreply={onreply} needsAuth={needsAuth} onlogin={onlogin} />
+				<BroadcastCard
+					message={message}
+					onreply={onreply}
+					onopeninputs={onopeninputs}
+					needsAuth={needsAuth}
+					onlogin={onlogin}
+				/>
 			{/each}
 		{/if}
 	</div>

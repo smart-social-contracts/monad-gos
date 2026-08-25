@@ -650,6 +650,7 @@
 								needsAuth={needsAuth}
 								onreply={startReplyToBroadcast}
 								onopenthread={openThread}
+								onopeninputs={openInputs}
 								onlogin={handleLogin}
 							/>
 						{:else if view === 'thread'}

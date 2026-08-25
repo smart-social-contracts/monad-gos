@@ -309,3 +309,108 @@ export const mockProposals = [
 		voting_deadline: '2026-08-26T18:00:00Z',
 	},
 ];
+
+/**
+ * @typedef {object} ReplyInputs
+ * @property {string} message_id
+ * @property {string} thread_id
+ * @property {string} broadcast_id
+ * @property {string} kind
+ * @property {string} model
+ * @property {string} engine
+ * @property {string} engine_host
+ * @property {string} prompt
+ * @property {string} temperature
+ * @property {number} num_predict
+ * @property {string} seed
+ * @property {boolean} json_mode
+ * @property {number} created_at
+ * @property {string} receipt_hash
+ */
+
+function mockReceipt(partial) {
+	return {
+		engine: 'mock',
+		engine_host: 'local',
+		model: 'mock',
+		temperature: '0',
+		num_predict: 0,
+		seed: '0',
+		json_mode: false,
+		created_at: NOW - 1800,
+		...partial,
+	};
+}
+
+/** @type {Record<string, ReplyInputs>} */
+export const mockReplyInputs = {
+	'broadcast-1': mockReceipt({
+		message_id: 'broadcast-1',
+		thread_id: '',
+		broadcast_id: 'broadcast-1',
+		kind: 'broadcast',
+		prompt:
+			'Public legislative input. Epoch 0 broadcast. Treasury holds enough for two modest proposals. Water fees remain the loudest wish.',
+		receipt_hash: 'sha256:a744b626a3d970578304f4b6735e71f4a1489df7850dc98ad627a0c04eee30df',
+		created_at: NOW - 7200,
+	}),
+	'broadcast-2': mockReceipt({
+		message_id: 'broadcast-2',
+		thread_id: '',
+		broadcast_id: 'broadcast-2',
+		kind: 'broadcast',
+		prompt:
+			'Public legislative input. Membership due is 12 credits per month. Paying keeps you current; withholding is a legitimate signal.',
+		receipt_hash: 'sha256:52cd0ea65006be445e82e99e2fae162d047229e417125e6de82f800e0d14c9ec',
+		created_at: NOW - 3600,
+	}),
+	'broadcast-3': mockReceipt({
+		message_id: 'broadcast-3',
+		thread_id: '',
+		broadcast_id: 'broadcast-3',
+		kind: 'broadcast',
+		prompt:
+			'Public legislative input. Two proposals on water infrastructure from the last epoch. Voting is open.',
+		receipt_hash: 'sha256:0ed5b8e80890a1f45797089f9db84f2dc16deb5eb431a892ad22d3693a0dac87',
+	}),
+	'msg-2': mockReceipt({
+		message_id: 'msg-2',
+		thread_id: 'thread-1',
+		broadcast_id: 'broadcast-2',
+		kind: 'thread',
+		prompt:
+			'You are the Monad of this Monad GOS realm.\n\nConversation so far:\nCitizen: Why 12 credits? Last epoch it was 10.\n\nMonad:',
+		receipt_hash: 'sha256:af8ab9797d029abe886c0da047c150b84910e98b92bf9f1555081a6d5461a771',
+		created_at: NOW - 2800,
+	}),
+	'msg-4': mockReceipt({
+		message_id: 'msg-4',
+		thread_id: 'thread-1',
+		broadcast_id: 'broadcast-2',
+		kind: 'thread',
+		prompt:
+			'You are the Monad of this Monad GOS realm.\n\nConversation so far:\nCitizen: Why 12 credits? Last epoch it was 10.\nMonad: The treasury forecast for pipe repair is higher.\nCitizen: Fair. I can live with 12 if the east path is first.\n\nMonad:',
+		receipt_hash: 'sha256:5e0b6aedaab9aad6bb941daf4e41bc37ec7713a6d17a9604629496b909e80726',
+		created_at: NOW - 2500,
+	}),
+	'msg-w2': mockReceipt({
+		message_id: 'msg-w2',
+		thread_id: 'thread-2',
+		broadcast_id: '',
+		kind: 'thread',
+		prompt:
+			'You are the Monad of this Monad GOS realm.\n\nConversation so far:\nCitizen: The east path flooding is worse after last rain.\n\nMonad:',
+		receipt_hash: 'sha256:516a16c1bf7c9f367772c0cf50528c2ac27bd593061b0f4e2cbe9b4e5c975177',
+		created_at: NOW - 5800,
+	}),
+	'msg-p2': mockReceipt({
+		message_id: 'msg-p2',
+		thread_id: 'thread-private-new',
+		broadcast_id: 'broadcast-1',
+		kind: 'thread',
+		prompt:
+			'You are the Monad of this Monad GOS realm.\n\nConversation so far:\nCitizen: I want the membership due lowered until east path is fixed.\n\nMonad:',
+		receipt_hash: 'sha256:65acbc793cbbd49e539704a1895dc2af691516c7a5ae3c697a4362f68b79eb7b',
+		created_at: NOW - 60,
+	}),
+};

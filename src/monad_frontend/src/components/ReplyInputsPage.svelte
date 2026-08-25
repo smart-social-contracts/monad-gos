@@ -11,6 +11,8 @@
 		onback?: () => void;
 	} = $props();
 
+	let copied = $state(false);
+
 	function formatTime(ts: number): string {
 		if (!ts) return '—';
 		return new Date(ts * 1000).toLocaleString(undefined, {
@@ -19,6 +21,31 @@
 			hour: '2-digit',
 			minute: '2-digit',
 		});
+	}
+
+	function rerunPayload(record: ReplyInputs) {
+		return {
+			model: record.model,
+			temperature: record.temperature,
+			num_predict: record.num_predict,
+			seed: record.seed,
+			json_mode: record.json_mode,
+			prompt: record.prompt,
+		};
+	}
+
+	async function copyRerun() {
+		if (!inputs) return;
+		const payload = JSON.stringify(rerunPayload(inputs), null, 2);
+		try {
+			await navigator.clipboard.writeText(payload);
+			copied = true;
+			setTimeout(() => {
+				copied = false;
+			}, 2000);
+		} catch {
+			copied = false;
+		}
 	}
 </script>
 
@@ -29,9 +56,9 @@
 	<header class="section-header">
 		<h1>Inputs for reproducibility</h1>
 		<p class="monad-gos-muted intro">
-			These are the exact inputs the Monad used for this reply. Because of how language models
-			and hardware work, a rerun is unlikely to match word for word. It should be
-			semantically similar.
+			These are the inputs, model, and parameters the Monad used for this reply. The receipt
+			hash is a content commitment recorded with the reply, so the record cannot be rewritten
+			later. A re-run will not match word for word — language models are non-deterministic.
 		</p>
 	</header>
 
@@ -71,7 +98,17 @@
 				<dt>Seed</dt>
 				<dd>{inputs.seed || 'unset'}</dd>
 			</div>
+			<div>
+				<dt>Receipt</dt>
+				<dd class="hash">{inputs.receipt_hash || '—'}</dd>
+			</div>
 		</dl>
+
+		<p class="rerun">
+			<button type="button" class="monad-gos-btn monad-gos-btn-ghost" onclick={copyRerun}>
+				{copied ? 'Copied re-run payload' : 'Copy re-run payload'}
+			</button>
+		</p>
 
 		<h2>Prompt</h2>
 		<pre class="prompt">{inputs.prompt}</pre>
@@ -129,6 +166,16 @@
 
 	dd {
 		margin: 0;
+	}
+
+	.hash {
+		word-break: break-all;
+		font-family: var(--monad-gos-font-ui);
+		font-size: 0.8rem;
+	}
+
+	.rerun {
+		margin: 1.25rem 0 0;
 	}
 
 	.prompt {
