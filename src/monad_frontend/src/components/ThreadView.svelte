@@ -8,6 +8,7 @@
 		onback,
 		monadAuthor = '',
 		awaitingMonad = false,
+		error = null,
 		onopeninputs,
 	}: {
 		thread: ThreadSummary | null;
@@ -15,6 +16,7 @@
 		onback?: () => void;
 		monadAuthor?: string;
 		awaitingMonad?: boolean;
+		error?: string | null;
 		onopeninputs?: (messageId: string) => void;
 	} = $props();
 </script>
@@ -42,6 +44,9 @@
 			<p class="monad-gos-muted considering" role="status" aria-live="polite">
 				The Monad is considering…
 			</p>
+		{/if}
+		{#if error}
+			<p class="reply-error" role="alert">{error}</p>
 		{/if}
 	{:else}
 		<button type="button" class="back-link" onclick={() => onback?.()}>← Back</button>
@@ -98,5 +103,12 @@
 		font-family: var(--monad-gos-font-ui);
 		font-style: italic;
 		font-size: 0.85rem;
+	}
+
+	.reply-error {
+		margin: 0;
+		font-family: var(--monad-gos-font-ui);
+		font-size: 0.85rem;
+		color: var(--monad-gos-no);
 	}
 </style>

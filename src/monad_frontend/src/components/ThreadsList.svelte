@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { ThreadSummary } from '../lib/types';
+	import { createThreadOpenHandler } from '../lib/conversation.js';
 
 	let {
 		threads = [],
@@ -8,6 +9,8 @@
 		threads?: ThreadSummary[];
 		onopenthread?: (threadId: string) => void;
 	} = $props();
+
+	const openFromEvent = createThreadOpenHandler((threadId) => onopenthread?.(threadId));
 </script>
 
 <section class="threads-list" aria-label="Threads">
@@ -24,7 +27,12 @@
 		<ul>
 			{#each threads as thread (thread.id)}
 				<li>
-					<button type="button" class="thread-link" onclick={() => onopenthread?.(thread.id)}>
+					<button
+						type="button"
+						class="thread-link"
+						data-thread-id={thread.id}
+						onclick={openFromEvent}
+					>
 						<span class="title">{thread.title}</span>
 						<span class="monad-gos-muted meta">
 							{thread.participant_count} participants · {thread.visibility}
@@ -70,10 +78,13 @@
 		font-family: var(--monad-gos-font);
 		font-size: 1rem;
 		color: inherit;
+		touch-action: manipulation;
 	}
 
-	.thread-link:hover {
-		background: var(--monad-gos-accent-soft);
+	@media (hover: hover) and (pointer: fine) {
+		.thread-link:hover {
+			background: var(--monad-gos-accent-soft);
+		}
 	}
 
 	.title {

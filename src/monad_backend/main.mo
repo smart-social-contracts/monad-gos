@@ -411,6 +411,23 @@ persistent actor MonadGos {
     );
   };
 
+  public shared ({ caller }) func start_thread(body : Text) : async Types.Result_ThreadId {
+    switch (requireOpen()) {
+      case (?err) return #err(err);
+      case null {};
+    };
+    if (not converseOpen()) {
+      return #err(#forbidden("epoch is not open for thread replies"));
+    };
+    Communication.startThread(
+      communication,
+      caller,
+      body,
+      Wishes.currentEpochId(agora),
+      monadPrincipal,
+    );
+  };
+
   public shared ({ caller }) func reply_to_thread(
     threadId : Types.ThreadId,
     body : Text,

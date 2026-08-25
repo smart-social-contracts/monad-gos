@@ -8,6 +8,8 @@ import { HttpAgent, Actor } from '@dfinity/agent';
 import { IDL } from '@dfinity/candid';
 import { getIdentity } from './lib/auth.js';
 import { isEmbeddedInPortal } from './lib/portal-bridge.ts';
+import { hasReplyAfter, MONAD_REPLY_MISSING } from './lib/conversation.js';
+import { envForcesMock, inferCanisterIdFromHost } from './lib/runtime.js';
 import {
 	mockAlignment,
 	mockBroadcast,
@@ -15,6 +17,7 @@ import {
 	mockProposals,
 	mockReplyInputs,
 	mockThreads,
+	MONAD_AUTHOR,
 } from './lib/mock_data.js';
 
 /** @type {string | null} */
@@ -29,7 +32,7 @@ export function configureMonadGosRuntime({ canisterId, host } = {}) {
 }
 
 export function getCanisterId() {
-	return runtimeCanisterId || import.meta.env.VITE_MONAD_GOS_CANISTER_ID || '';
+	return runtimeCanisterId || inferCanisterIdFromHost() || '';
 }
 
 function getHost() {
@@ -47,7 +50,7 @@ function getHost() {
 }
 
 export function isMockMode() {
-	if (import.meta.env.VITE_MONAD_GOS_MOCK === 'true') return true;
+	if (envForcesMock()) return true;
 	if (isEmbeddedInPortal()) return false;
 	return !getCanisterId();
 }
@@ -264,6 +267,7 @@ const gggIdlFactory = ({ IDL }) => {
 		read_thread: IDL.Func([IDL.Text], [IDL.Opt(Thread)], ['query']),
 		submit_wish: IDL.Func([SubmitWishInput], [Result_WishId], []),
 		reply_to_broadcast: IDL.Func([IDL.Text, IDL.Text], [Result_ThreadId], []),
+		start_thread: IDL.Func([IDL.Text], [Result_ThreadId], []),
 		reply_to_thread: IDL.Func([IDL.Text, IDL.Text], [Result_ThreadMessageId], []),
 		list_proposals: IDL.Func([ProposalFilter], [IDL.Vec(Proposal)], ['query']),
 		cast_vote: IDL.Func([CastVoteInput], [Result_VoteId], []),
@@ -557,16 +561,22 @@ export function monadPrincipal() {
 	return import.meta.env.VITE_MONAD_PRINCIPAL || '';
 }
 
+export { MONAD_REPLY_MISSING };
+
 export async function waitForNewMessage(threadId, previousCount, timeoutMs = 45000, intervalMs = 2000) {
 	const started = Date.now();
+	const immediate = await readThread(threadId);
+	if (hasReplyAfter(immediate.messages, previousCount)) {
+		return immediate;
+	}
 	while (Date.now() - started < timeoutMs) {
 		await new Promise((resolve) => setTimeout(resolve, intervalMs));
 		const data = await readThread(threadId);
-		if ((data.messages?.length ?? 0) > previousCount) {
+		if (hasReplyAfter(data.messages, previousCount)) {
 			return data;
 		}
 	}
-	return null;
+	throw new Error(MONAD_REPLY_MISSING);
 }
 
 function mapReplyInputs(inputs) {
@@ -708,6 +718,82 @@ export async function castVote(proposalId, choice) {
 	return { vote_id: result.ok };
 }
 
+function mockThreadTitle(body) {
+	return body.length > 48 ? `${body.slice(0, 48)}…` : body;
+}
+
+function appendMockCitizenMessage(entry, body) {
+	const now = Math.floor(Date.now() / 1000);
+	const message = {
+		id: `msg-mock-${now}-${entry.messages.length}`,
+		thread_id: entry.id,
+		author: 'citizen-mock',
+		body,
+		created_at: now,
+	};
+	entry.messages.push(message);
+	entry.updated_at = now;
+	entry.last_activity_at = now;
+	entry.participant_count = Math.max(entry.participant_count, 1);
+	return message;
+}
+
+function appendMockMonadReply(entry, citizenBody) {
+	const now = Math.floor(Date.now() / 1000);
+	const excerpt = citizenBody.trim().slice(0, 72);
+	const message = {
+		id: `msg-mock-${now}-${entry.messages.length}`,
+		thread_id: entry.id,
+		author: MONAD_AUTHOR,
+		body: excerpt
+			? `I hear you. I am answering in this thread now — not waiting for the seal: ${excerpt}`
+			: 'I hear you. I am answering in this thread now — not waiting for the seal.',
+		created_at: now,
+	};
+	entry.messages.push(message);
+	entry.updated_at = now;
+	entry.last_activity_at = now;
+	entry.participant_count = Math.max(entry.participant_count, 2);
+	mockReplyInputs[message.id] = {
+		message_id: message.id,
+		thread_id: entry.id,
+		broadcast_id: entry.broadcast_id || '',
+		kind: 'thread',
+		model: 'mock',
+		engine: 'mock',
+		engine_host: 'local',
+		prompt: `You are the Monad of this Monad GOS realm.\n\nConversation so far:\nCitizen: ${citizenBody}\n\nMonad:`,
+		temperature: '0',
+		num_predict: 0,
+		seed: '0',
+		json_mode: false,
+		created_at: now,
+		receipt_hash: `sha256:mock-${message.id}`,
+	};
+	return message;
+}
+
+function createMockPrivateThread(body, broadcastId) {
+	const threadId = `thread-private-${Date.now()}`;
+	const now = Math.floor(Date.now() / 1000);
+	const entry = {
+		id: threadId,
+		title: mockThreadTitle(body),
+		visibility: 'private',
+		participant_count: 1,
+		epoch: mockEpochStatus.epoch_id,
+		broadcast_id: broadcastId,
+		created_at: now,
+		updated_at: now,
+		last_activity_at: now,
+		messages: [],
+	};
+	appendMockCitizenMessage(entry, body);
+	appendMockMonadReply(entry, body);
+	mockThreads[threadId] = entry;
+	return threadId;
+}
+
 /**
  * @param {string} broadcastId
  * @param {string} body
@@ -715,34 +801,32 @@ export async function castVote(proposalId, choice) {
 export async function replyToBroadcast(broadcastId, body) {
 	if (isMockMode()) {
 		await delay();
-		const threadId = `thread-private-${Date.now()}`;
-		const now = Math.floor(Date.now() / 1000);
-		mockThreads[threadId] = {
-			id: threadId,
-			title: body.slice(0, 48),
-			visibility: 'private',
-			participant_count: 1,
-			epoch: mockEpochStatus.epoch_id,
-			broadcast_id: broadcastId,
-			created_at: now,
-			updated_at: now,
-			last_activity_at: now,
-			messages: [
-				{
-					id: `msg-${now}`,
-					thread_id: threadId,
-					author: 'citizen-mock',
-					body,
-					created_at: now,
-				},
-			],
-		};
-		return { thread_id: threadId };
+		return { thread_id: createMockPrivateThread(body, broadcastId) };
 	}
 	const actor = await getUpdateActor();
 	const result = await actor.reply_to_broadcast(broadcastId, body);
 	if ('err' in result) {
 		throw new Error(`reply_to_broadcast failed: ${JSON.stringify(result.err)}`);
+	}
+	return { thread_id: result.ok };
+}
+
+/**
+ * Start a private citizen↔Monad thread without tying it to a broadcast.
+ * @param {string} body
+ */
+export async function startThread(body) {
+	if (isMockMode()) {
+		await delay();
+		return { thread_id: createMockPrivateThread(body) };
+	}
+	const actor = await getUpdateActor();
+	if (typeof actor.start_thread !== 'function') {
+		throw new Error('Direct threads are not available on this backend yet.');
+	}
+	const result = await actor.start_thread(body);
+	if ('err' in result) {
+		throw new Error(`start_thread failed: ${JSON.stringify(result.err)}`);
 	}
 	return { thread_id: result.ok };
 }
@@ -756,18 +840,9 @@ export async function replyToThread(threadId, body) {
 		await delay();
 		const entry = mockThreads[threadId];
 		if (!entry) throw new Error('Thread not found');
-		const now = Math.floor(Date.now() / 1000);
-		entry.messages.push({
-			id: `msg-${now}`,
-			thread_id: threadId,
-			author: 'citizen-mock',
-			body,
-			created_at: now,
-		});
-		entry.updated_at = now;
-		entry.last_activity_at = now;
-		entry.participant_count = Math.max(entry.participant_count, 1);
-		return { message_id: `msg-${now}` };
+		const citizen = appendMockCitizenMessage(entry, body);
+		appendMockMonadReply(entry, body);
+		return { message_id: citizen.id };
 	}
 	const actor = await getUpdateActor();
 	const result = await actor.reply_to_thread(threadId, body);

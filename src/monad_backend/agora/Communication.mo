@@ -198,20 +198,16 @@ module {
     };
   };
 
-  public func replyToBroadcast(
+  func createPrivateThread(
     store : Store,
     caller : Principal,
-    broadcastId : Types.BroadcastId,
     body : Text,
     epoch : Types.EpochId,
     monad : ?Principal,
+    broadcastId : ?Types.BroadcastId,
   ) : Types.Result_ThreadId {
     if (Text.size(body) == 0) {
       return #err(#invalid_input("body is required"));
-    };
-    switch (Map.get(store.broadcasts, Text.compare, broadcastId)) {
-      case null return #err(#not_found);
-      case (?_) {};
     };
     let threadId = Types.entityId("thread", store.nextThreadId);
     store.nextThreadId += 1;
@@ -236,13 +232,38 @@ module {
       visibility = "private";
       participant_count = participantCount(store, threadId);
       epoch;
-      broadcast_id = ?broadcastId;
+      broadcast_id = broadcastId;
       messages = [message];
       created_at = timestamp;
       updated_at = timestamp;
     };
     Map.add(store.threads, Text.compare, threadId, thread);
     #ok(threadId);
+  };
+
+  public func replyToBroadcast(
+    store : Store,
+    caller : Principal,
+    broadcastId : Types.BroadcastId,
+    body : Text,
+    epoch : Types.EpochId,
+    monad : ?Principal,
+  ) : Types.Result_ThreadId {
+    switch (Map.get(store.broadcasts, Text.compare, broadcastId)) {
+      case null return #err(#not_found);
+      case (?_) {};
+    };
+    createPrivateThread(store, caller, body, epoch, monad, ?broadcastId);
+  };
+
+  public func startThread(
+    store : Store,
+    caller : Principal,
+    body : Text,
+    epoch : Types.EpochId,
+    monad : ?Principal,
+  ) : Types.Result_ThreadId {
+    createPrivateThread(store, caller, body, epoch, monad, null);
   };
 
   public func replyToThread(

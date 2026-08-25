@@ -94,7 +94,7 @@
 
 const NOW = Math.floor(Date.now() / 1000);
 const EPOCH_ID = '0';
-const MONAD_AUTHOR = 'aaaaa-aa';
+export const MONAD_AUTHOR = 'aaaaa-aa';
 
 /** @type {EpochStatus} */
 export const mockEpochStatus = {
@@ -414,3 +414,19 @@ export const mockReplyInputs = {
 		created_at: NOW - 60,
 	}),
 };
+
+export function resetMockThreads() {
+	for (const key of Object.keys(mockThreads)) {
+		if (key !== 'thread-1' && key !== 'thread-2' && key !== 'thread-private-new') {
+			delete mockThreads[key];
+		}
+	}
+	for (const thread of Object.values(mockThreads)) {
+		thread.messages = thread.messages.filter((message) => !String(message.id).startsWith('msg-mock-'));
+	}
+	for (const key of Object.keys(mockReplyInputs)) {
+		if (String(key).startsWith('msg-mock-')) {
+			delete mockReplyInputs[key];
+		}
+	}
+}

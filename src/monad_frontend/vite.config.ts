@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { svelteTesting } from '@testing-library/svelte/vite';
 import { resolve } from 'node:path';
 import { writeFileSync, mkdirSync } from 'node:fs';
 
@@ -42,7 +43,11 @@ const assetsJson = `[
 
 export default defineConfig({
 	plugins: [
-		svelte({ emitCss: false }),
+		svelte({
+			emitCss: false,
+			compilerOptions: { hmr: !process.env.VITEST },
+		}),
+		svelteTesting(),
 		{
 			name: 'emit-index-html',
 			closeBundle() {
@@ -71,5 +76,9 @@ export default defineConfig({
 		target: 'es2020',
 		emptyOutDir: true,
 		outDir: 'dist',
+	},
+	test: {
+		environment: 'jsdom',
+		include: ['src/**/*.test.js', 'src/**/*.test.ts'],
 	},
 });

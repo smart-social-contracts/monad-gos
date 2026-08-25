@@ -9,6 +9,7 @@ import {
 	requestAuthRefresh,
 	waitForPortalDelegation,
 } from './portal-bridge.ts';
+import { envForcesMock, inferCanisterIdFromHost } from './runtime.js';
 
 const IDENTITY_PROVIDER = 'https://identity.ic0.app';
 
@@ -16,9 +17,9 @@ const IDENTITY_PROVIDER = 'https://identity.ic0.app';
 let authClient = null;
 
 export function isAuthMockMode() {
-	if (import.meta.env.VITE_MONAD_GOS_MOCK === 'true') return true;
+	if (envForcesMock()) return true;
 	if (isEmbeddedInPortal()) return false;
-	return !import.meta.env.VITE_MONAD_GOS_CANISTER_ID;
+	return !inferCanisterIdFromHost();
 }
 
 async function getAuthClient() {
